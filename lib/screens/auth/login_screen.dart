@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'signup_screen.dart';
+import '../../config/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,13 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppTheme.spacingLG),
+            padding: EdgeInsets.all(AppTheme.spacingLG),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: AppTheme.spacingXXL),
+                  SizedBox(height: AppTheme.spacingXXL),
 
                   // Enhanced Logo/Title with Animation
                   TweenAnimationBuilder<double>(
@@ -94,12 +95,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: AppTheme.spacingXS),
+                        SizedBox(height: AppTheme.spacingXS),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.fitness_center_rounded, color: AppTheme.primaryColor, size: 20),
-                            const SizedBox(width: AppTheme.spacingXS),
+                            SizedBox(width: AppTheme.spacingXS),
                             Text(
                               'Find Your Perfect Fitness Trainer',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -113,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: AppTheme.spacingXXL),
+                  SizedBox(height: AppTheme.spacingXXL),
                 
                 // Email Field
                 TextFormField(
@@ -189,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text('Login'),
-                              const SizedBox(width: AppTheme.spacingSM),
+                              SizedBox(width: AppTheme.spacingSM),
                               Icon(Icons.arrow_forward_rounded, size: 20),
                             ],
                           ),
@@ -226,6 +227,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-}
+    )
+  );
+}}

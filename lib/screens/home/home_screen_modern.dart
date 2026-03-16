@@ -5,6 +5,9 @@ import '../../services/trainer_service.dart';
 import '../../models/trainer_model.dart';
 import '../trainers/trainer_detail_screen_modern.dart';
 import '../search/search_screen.dart';
+import '../profile/profile_screen.dart';
+import '../messaging/conversations_screen.dart';
+import '../booking/my_bookings_screen.dart';
 import '../../config/theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -65,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     return Scaffold(
       body: SafeArea(
-        child: _selectedIndex == 0 ? _buildHomeTab() : _buildPlaceholder(),
+        child: _buildHomeTab(), // Always show home, navigation happens via Navigator.push
       ),
       bottomNavigationBar: _buildModernBottomNav(),
     );
@@ -106,50 +109,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         
         // Trainers Grid
         _isLoading
-            ? SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Animated dumbbell icon
-                      TweenAnimationBuilder<Offset>(
-                        tween: Tween<Offset>(
-                          begin: const Offset(0, -0.2),
-                          end: const Offset(0, 0.2),
-                        ),
-                        duration: const Duration(seconds: 2),
-                        curve: Curves.easeInOut,
-                        builder: (context, offset, child) {
-                          return Transform.translate(
-                            offset: offset,
-                            child: child,
-                          );
-                        },
-                        child: Icon(
-                          Icons.fitness_center_rounded,
-                          size: 48,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: AppTheme.spacingMD),
-                      Text(
-                        'Loading Trainers...',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppTheme.spacingSM),
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            ? const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
               )
             : SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -175,97 +136,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildHeader() {
     final user = context.watch<AuthProvider>().user;
-
+    
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fitness Category Icons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildFitnessIcon('strength'),
-              _buildFitnessIcon('cardio'),
-              _buildFitnessIcon('yoga'),
-              _buildFitnessIcon('crossfit'),
-              _buildFitnessIcon('nutrition'),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spacingMD),
-
           Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Hey ${user?.fullName.split(' ').first ?? 'Athlete'}! ',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                          WidgetSpan(
-                            child: Transform.rotate(
-                              angle: 0.2,
-                              child: Icon(
-                                Icons.sports_gymnastics_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ],
+                    Text(
+                      'Hey ${user?.fullName.split(' ').first ?? 'Athlete'}! 👋',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spacingXS),
+                    const SizedBox(height: 4),
                     Text(
-                      'Find Your
-Perfect Trainer',
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 0.9,
-                      ),
+                      'Find Your Trainer',
+                      style: Theme.of(context).textTheme.displayMedium,
                     ),
                   ],
                 ),
               ),
-              // Enhanced Profile Avatar with Animation
+              // Profile Avatar
               GestureDetector(
                 onTap: () {
-                  // TODO: Navigate to profile
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  );
                 },
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: 1),
-                  duration: AppTheme.mediumAnimation,
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: 1 + (value * 0.1),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [AppTheme.primaryGlow],
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.primaryColor, AppTheme.accentColor],
                     ),
-                    child: Center(
-                      child: Text(
-                        user?.fullName[0].toUpperCase() ?? 'A',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: AppTheme.backgroundColor,
-                          fontWeight: FontWeight.w900,
-                        ),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Center(
+                    child: Text(
+                      user?.fullName[0].toUpperCase() ?? 'A',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.backgroundColor,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -273,10 +192,10 @@ Perfect Trainer',
               ),
             ],
           ),
-
-          const SizedBox(height: AppTheme.spacingMD),
-
-          // Enhanced Search Bar with Pulse Animation
+          
+          const SizedBox(height: 24),
+          
+          // Search Bar
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -284,32 +203,17 @@ Perfect Trainer',
                 MaterialPageRoute(builder: (context) => const SearchScreen()),
               );
             },
-            child: TweenAnimationBuilder<Color?>(
-              tween: ColorTween(
-                begin: AppTheme.surfaceColor,
-                end: AppTheme.surfaceColor,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
               ),
-              duration: const Duration(seconds: 2),
-              builder: (context, color, child) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.primaryColor.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: child,
-                );
-              },
               child: TextField(
                 enabled: false,
                 decoration: InputDecoration(
                   hintText: 'Search trainers, specialties...',
                   hintStyle: TextStyle(color: AppTheme.textSecondary.withOpacity(0.5)),
-                  prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor, size: 24),
-                  suffixIcon: Icon(Icons.tune, color: AppTheme.textSecondary.withOpacity(0.6), size: 20),
+                  prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 ),
@@ -323,40 +227,33 @@ Perfect Trainer',
 
   Widget _buildQuickStats() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
             child: _buildStatCard(
-              icon: Icons.fitness_center_rounded,
+              icon: Icons.fitness_center,
               value: '${_trainers.length}',
               label: 'Trainers',
               color: AppTheme.primaryColor,
-              gradient: AppTheme.primaryGradient,
             ),
           ),
-          const SizedBox(width: AppTheme.spacingSM),
+          const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
               icon: Icons.star_rounded,
               value: '4.8',
               label: 'Avg Rating',
               color: AppTheme.warningColor,
-              gradient: LinearGradient(
-                colors: [AppTheme.warningColor, Colors.amber],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
             ),
           ),
-          const SizedBox(width: AppTheme.spacingSM),
+          const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
               icon: Icons.local_fire_department_rounded,
               value: '150+',
               label: 'Sessions',
               color: AppTheme.secondaryColor,
-              gradient: AppTheme.energeticGradient,
             ),
           ),
         ],
@@ -369,58 +266,29 @@ Perfect Trainer',
     required String value,
     required String label,
     required Color color,
-    Gradient? gradient,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: AppTheme.mediumAnimation,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: scale,
-            child: child,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppTheme.spacingMD),
-        decoration: BoxDecoration(
-          gradient: gradient ?? AppTheme.cardGradient,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withOpacity(0.2),
-            width: 1,
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: AppTheme.spacingXS),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacingXS),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -428,11 +296,7 @@ Perfect Trainer',
   Widget _buildModernBottomNav() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.surfaceColor, AppTheme.cardColor],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: AppTheme.surfaceColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -443,7 +307,7 @@ Perfect Trainer',
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD, vertical: AppTheme.spacingXS),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -463,36 +327,49 @@ Perfect Trainer',
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _selectedIndex = index);
-        // Add haptic feedback for better UX
-        // HapticFeedback.lightImpact();
+        if (index == 2) {
+          // Navigate to Messages screen - DON'T change selectedIndex
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+          );
+        } else if (index == 3) {
+          // Navigate to Bookings screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
+          );
+        } else if (index == 4) {
+          // Navigate to Profile screen - DON'T change selectedIndex  
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
+        } else {
+          // Only change selectedIndex for tabs 0, 1
+          setState(() => _selectedIndex = index);
+        }
       },
       child: AnimatedContainer(
-        duration: AppTheme.fastAnimation,
+        duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? AppTheme.spacingMD : AppTheme.spacingSM,
-          vertical: AppTheme.spacingXS,
+          horizontal: isSelected ? 16 : 8,
+          vertical: 8,
         ),
         decoration: BoxDecoration(
-          gradient: isSelected ? AppTheme.primaryGradient.withOpacity(0.2) : null,
-          color: isSelected ? null : Colors.transparent,
+          color: isSelected ? AppTheme.primaryColor.withOpacity(0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected ? Border.all(color: AppTheme.primaryColor.withOpacity(0.3), width: 1) : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              duration: AppTheme.fastAnimation,
-              scale: isSelected ? 1.1 : 1.0,
-              child: Icon(
-                icon,
-                color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
-                size: isSelected ? 26 : 24,
-              ),
+            Icon(
+              icon,
+              color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+              size: 24,
             ),
             if (isSelected) ...[
-              const SizedBox(width: AppTheme.spacingXS),
+              const SizedBox(width: 8),
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -526,42 +403,6 @@ Perfect Trainer',
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFitnessIcon(String category) {
-    final icon = AppTheme.getFitnessIcon(category);
-    final color = AppTheme.getFitnessColor(category);
-
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            gradient: AppTheme.getFitnessGradient(category),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 10,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Center(
-            child: Icon(icon, color: AppTheme.backgroundColor, size: 24),
-          ),
-        ),
-        const SizedBox(height: AppTheme.spacingXS),
-        Text(
-          category,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -639,14 +480,15 @@ class ModernTrainerCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // Enhanced Avatar with gradient border and glow
+                  // Avatar with gradient border
                   Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryColor, AppTheme.accentColor],
+                      ),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [AppTheme.primaryGlow],
                     ),
                     padding: const EdgeInsets.all(3),
                     child: Container(
@@ -729,21 +571,20 @@ class ModernTrainerCard extends StatelessWidget {
                     ),
                   ),
                   
-                  // Enhanced Price with gradient
+                  // Price
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
+                      color: AppTheme.primaryColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [AppTheme.primaryGlow],
                     ),
                     child: Text(
                       trainer.priceDisplay,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.backgroundColor,
+                        color: AppTheme.primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

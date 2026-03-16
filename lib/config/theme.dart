@@ -2,59 +2,162 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Enhanced Energetic Color Palette
-  static const Color primaryColor = Color(0xFF00FF87); // Vibrant Neon Green
-  static const Color secondaryColor = Color(0xFFFF3E3E); // Energetic Red
-  static const Color accentColor = Color(0xFF00D9FF); // Electric Blue
-  static const Color tertiaryColor = Color(0xFFFFB800); // Golden Yellow
-  static const Color backgroundColor = Color(0xFF0A0A1A); // Deep Space Blue (darker for contrast)
-  static const Color surfaceColor = Color(0xFF121222); // Slightly lighter surface
-  static const Color cardColor = Color(0xFF1A1A2E); // Card background
+  // Modern Athletic Colors - Nike/Reebok inspired
+  static const Color primaryColor = Color(0xFF00FF87); // Neon green
+  static const Color secondaryColor = Color(0xFFFF3E3E); // Athletic red
+  static const Color accentColor = Color(0xFF00D9FF); // Electric blue
+  static const Color backgroundColor = Color(0xFF000000); // Pure black
+  static const Color surfaceColor = Color(0xFF1A1F3A); // Card background
+  static const Color cardColor = Color(0xFF1E2442);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB0B3C1);
   static const Color successColor = Color(0xFF00FF87);
   static const Color errorColor = Color(0xFFFF3E3E);
   static const Color warningColor = Color(0xFFFFB800);
-  static const Color infoColor = Color(0xFF00D9FF);
 
-  // Gradient Colors for Energetic Effects
-  static LinearGradient primaryGradient = const LinearGradient(
-    colors: [Color(0xFF00FF87), Color(0xFF00D9FF)],
+  // Spacing Constants
+  static const double spacingXS = 4.0;
+  static const double spacingSM = 8.0;
+  static const double spacingMD = 16.0;
+  static const double spacingLG = 24.0;
+  static const double spacingXL = 32.0;
+  static const double spacingXXL = 48.0;
+
+  // Animation Durations
+  static const Duration fastAnimation = Duration(milliseconds: 200);
+  static const Duration mediumAnimation = Duration(milliseconds: 400);
+  static const Duration slowAnimation = Duration(milliseconds: 800);
+
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primaryColor, accentColor],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static LinearGradient energeticGradient = const LinearGradient(
-    colors: [Color(0xFFFF3E3E), Color(0xFFFFB800)],
+  static const LinearGradient energeticGradient = LinearGradient(
+    colors: [secondaryColor, Color(0xFFFF6B6B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static LinearGradient cardGradient = LinearGradient(
-    colors: [cardColor.withOpacity(0.8), cardColor],
+  static const LinearGradient cardGradient = LinearGradient(
+    colors: [cardColor, surfaceColor],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Glow Effects
+  // Box Shadows
   static BoxShadow primaryGlow = BoxShadow(
     color: primaryColor.withOpacity(0.3),
     blurRadius: 20,
     spreadRadius: 2,
   );
 
-  static BoxShadow energeticGlow = BoxShadow(
-    color: secondaryColor.withOpacity(0.3),
-    blurRadius: 20,
-    spreadRadius: 2,
-  );
-  
+  // Button Decorations
+  static BoxDecoration gradientButtonDecoration({double radius = 12}) {
+    return BoxDecoration(
+      gradient: primaryGradient,
+      borderRadius: BorderRadius.circular(radius),
+      boxShadow: [primaryGlow],
+    );
+  }
+
+  static BoxDecoration energeticButtonDecoration({double radius = 12}) {
+    return BoxDecoration(
+      gradient: energeticGradient,
+      borderRadius: BorderRadius.circular(radius),
+      boxShadow: [
+        BoxShadow(
+          color: secondaryColor.withOpacity(0.3),
+          blurRadius: 20,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+  }
+
+  static ButtonStyle gradientButtonStyle({double radius = 12}) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+
+  // Fitness Category Helpers
+  static IconData getFitnessIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'strength':
+        return Icons.fitness_center_rounded;
+      case 'cardio':
+        return Icons.directions_run_rounded;
+      case 'yoga':
+        return Icons.self_improvement_rounded;
+      case 'crossfit':
+        return Icons.sports_gymnastics_rounded;
+      case 'nutrition':
+        return Icons.restaurant_rounded;
+      default:
+        return Icons.sports_rounded;
+    }
+  }
+
+  static Color getFitnessColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'strength':
+        return primaryColor;
+      case 'cardio':
+        return secondaryColor;
+      case 'yoga':
+        return accentColor;
+      case 'crossfit':
+        return warningColor;
+      case 'nutrition':
+        return successColor;
+      default:
+        return primaryColor;
+    }
+  }
+
+  static LinearGradient getFitnessGradient(String category) {
+    switch (category.toLowerCase()) {
+      case 'strength':
+        return primaryGradient;
+      case 'cardio':
+        return energeticGradient;
+      case 'yoga':
+        return const LinearGradient(
+          colors: [accentColor, Color(0xFF00A3CC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'crossfit':
+        return const LinearGradient(
+          colors: [warningColor, Color(0xFFFFD700)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'nutrition':
+        return const LinearGradient(
+          colors: [successColor, Color(0xFF00CC6F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      default:
+        return primaryGradient;
+    }
+  }
+
   // Dark Athletic Theme
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: backgroundColor,
-    colorScheme: ColorScheme.dark(
+    colorScheme: const ColorScheme.dark(
       primary: primaryColor,
       secondary: secondaryColor,
       error: errorColor,
@@ -62,39 +165,34 @@ class AppTheme {
       surface: surfaceColor,
     ),
     
-    // Enhanced Text Theme - More Impactful and Energetic
+    // Text Theme - Bold Athletic Style
     textTheme: GoogleFonts.montserratTextTheme(ThemeData.dark().textTheme).copyWith(
       displayLarge: GoogleFonts.montserrat(
-        fontSize: 48,
+        fontSize: 40,
         fontWeight: FontWeight.w900,
         color: textPrimary,
-        letterSpacing: -1.5,
-        height: 1.1,
+        letterSpacing: -1,
       ),
       displayMedium: GoogleFonts.montserrat(
-        fontSize: 36,
+        fontSize: 32,
         fontWeight: FontWeight.w900,
-        color: textPrimary,
-        letterSpacing: -0.8,
-        height: 1.1,
-      ),
-      displaySmall: GoogleFonts.montserrat(
-        fontSize: 30,
-        fontWeight: FontWeight.bold,
         color: textPrimary,
         letterSpacing: -0.5,
       ),
-      headlineLarge: GoogleFonts.montserrat(
-        fontSize: 26,
+      displaySmall: GoogleFonts.montserrat(
+        fontSize: 28,
         fontWeight: FontWeight.bold,
         color: textPrimary,
-        letterSpacing: -0.3,
+      ),
+      headlineLarge: GoogleFonts.montserrat(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: textPrimary,
       ),
       headlineMedium: GoogleFonts.montserrat(
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: FontWeight.w700,
         color: textPrimary,
-        letterSpacing: -0.2,
       ),
       headlineSmall: GoogleFonts.montserrat(
         fontSize: 18,
@@ -104,29 +202,14 @@ class AppTheme {
       bodyLarge: GoogleFonts.inter(
         fontSize: 16,
         color: textPrimary,
-        height: 1.5,
       ),
       bodyMedium: GoogleFonts.inter(
         fontSize: 14,
         color: textSecondary,
-        height: 1.4,
       ),
       bodySmall: GoogleFonts.inter(
         fontSize: 12,
-        color: textSecondary.withOpacity(0.8),
-        height: 1.3,
-      ),
-      labelLarge: GoogleFonts.montserrat(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: textPrimary,
-        letterSpacing: 0.5,
-      ),
-      labelMedium: GoogleFonts.montserrat(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: textPrimary,
-        letterSpacing: 0.3,
+        color: textSecondary,
       ),
     ),
     
@@ -142,50 +225,39 @@ class AppTheme {
       ),
     ),
     
-    // Enhanced Card Theme with Depth
-    cardTheme: CardTheme(
+    // Card Theme
+    cardTheme: const CardThemeData(
       color: cardColor,
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.2),
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
-      surfaceTintColor: Colors.white.withOpacity(0.05),
     ),
-
-    // Enhanced Input Decoration with Focus Effects
-    inputDecorationTheme: InputDecorationTheme(
+    
+    // Input Decoration Theme
+    inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: surfaceColor,
       border: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         borderSide: BorderSide(color: primaryColor, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         borderSide: BorderSide(color: errorColor, width: 1),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      labelStyle: GoogleFonts.inter(
-        color: textSecondary,
-        fontWeight: FontWeight.w500,
-      ),
-      hintStyle: GoogleFonts.inter(
-        color: textSecondary.withOpacity(0.6),
-      ),
-      prefixIconColor: MaterialStateColor.resolveWith((states)
-        => states.contains(MaterialState.focused) ? primaryColor : textSecondary),
+      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     ),
     
-    // Enhanced Elevated Button Theme with Gradient and Glow
+    // Elevated Button Theme - Bold & Energetic
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
@@ -200,14 +272,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
         ),
-        shadowColor: primaryColor.withOpacity(0.3),
       ),
-    ).copyWith(
-      elevation: MaterialStateProperty.resolveWith<double>((states) {
-        if (states.contains(MaterialState.pressed)) return 0;
-        if (states.contains(MaterialState.hovered)) return 8;
-        return 4;
-      }),
     ),
     
     // Text Button Theme
@@ -221,7 +286,7 @@ class AppTheme {
       ),
     ),
     
-    // Enhanced Outlined Button Theme
+    // Outlined Button Theme
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColor,
@@ -235,13 +300,6 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-    ).copyWith(
-      side: MaterialStateProperty.resolveWith<BorderSide>((states) {
-        if (states.contains(MaterialState.hovered)) {
-          return const BorderSide(color: secondaryColor, width: 2);
-        }
-        return const BorderSide(color: primaryColor, width: 2);
-      }),
     ),
     
     // Chip Theme
@@ -258,7 +316,7 @@ class AppTheme {
       ),
     ),
     
-    // Enhanced Bottom Navigation Bar Theme
+    // Bottom Navigation Bar Theme
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: surfaceColor,
       selectedItemColor: primaryColor,
@@ -272,142 +330,18 @@ class AppTheme {
       unselectedLabelStyle: GoogleFonts.inter(
         fontSize: 12,
       ),
-      selectedIconTheme: IconThemeData(
-        color: primaryColor,
-        size: 26,
-      ),
-      unselectedIconTheme: IconThemeData(
-        color: textSecondary,
-        size: 24,
-      ),
     ),
   );
+}
 
-  // Helper Methods for UI Components
-
-  static BoxDecoration gradientButtonDecoration({double radius = 16}) {
-    return BoxDecoration(
-      gradient: primaryGradient,
-      borderRadius: BorderRadius.circular(radius),
-      boxShadow: [primaryGlow],
+// Extension for Gradient opacity (workaround)
+extension GradientExtension on LinearGradient {
+  LinearGradient withOpacity(double opacity) {
+    return LinearGradient(
+      colors: colors.map((color) => color.withOpacity(opacity)).toList(),
+      begin: begin,
+      end: end,
+      stops: stops,
     );
-  }
-
-  static BoxDecoration energeticButtonDecoration({double radius = 16}) {
-    return BoxDecoration(
-      gradient: energeticGradient,
-      borderRadius: BorderRadius.circular(radius),
-      boxShadow: [energeticGlow],
-    );
-  }
-
-  static BoxDecoration cardDecoration() {
-    return BoxDecoration(
-      gradient: cardGradient,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 15,
-          offset: const Offset(0, 5),
-        ),
-      ],
-    );
-  }
-
-  static ButtonStyle gradientButtonStyle({double radius = 16}) {
-    return ButtonStyle(
-      backgroundColor: MaterialStateProperty.all<Color>(Colors.transparent),
-      foregroundColor: MaterialStateProperty.all<Color>(backgroundColor),
-      padding: MaterialStateProperty.all<EdgeInsets>(
-        const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-      ),
-      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-        ),
-      ),
-      textStyle: MaterialStateProperty.all<TextStyle>(
-        GoogleFonts.montserrat(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-      overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
-        if (states.contains(MaterialState.hovered)) {
-          return Colors.white.withOpacity(0.1);
-        }
-        if (states.contains(MaterialState.pressed)) {
-          return Colors.white.withOpacity(0.2);
-        }
-        return null;
-      }),
-    );
-  }
-
-  // Animation durations for consistent feel
-  static const Duration fastAnimation = Duration(milliseconds: 200);
-  static const Duration mediumAnimation = Duration(milliseconds: 300);
-  static const Duration slowAnimation = Duration(milliseconds: 500);
-
-  // Spacing system for consistency
-  static const double spacingXS = 4;
-  static const double spacingSM = 8;
-  static const double spacingMD = 16;
-  static const double spacingLG = 24;
-  static const double spacingXL = 32;
-  static const double spacingXXL = 48;
-
-  // Fitness Icon Mapping
-  static Map<String, IconData> fitnessIcons = {
-    'strength': Icons.fitness_center_rounded,
-    'cardio': Icons.directions_run_rounded,
-    'yoga': Icons.self_improvement_rounded,
-    'crossfit': Icons.sports_gymnastics_rounded,
-    'nutrition': Icons.restaurant_menu_rounded,
-    'weightlifting': Icons.sports_rounded,
-    'endurance': Icons.directions_bike_rounded,
-    'flexibility': Icons.accessibility_rounded,
-    'rehab': Icons.healing_rounded,
-    'boxing': Icons.sports_mma_rounded,
-    'pilates': Icons.spa_rounded,
-    'functional': Icons.airline_seat_flat_angled_rounded,
-  };
-
-  static IconData getFitnessIcon(String category, {IconData defaultIcon = Icons.fitness_center_rounded}) {
-    return fitnessIcons[category.toLowerCase()] ?? defaultIcon;
-  }
-
-  // Fitness Color Mapping
-  static Map<String, Color> fitnessColors = {
-    'strength': Color(0xFFFF6B6B),
-    'cardio': Color(0xFF4ECDC4),
-    'yoga': Color(0xFFA0D8B3),
-    'crossfit': Color(0xFFFFB347),
-    'nutrition': Color(0xFF68B0AB),
-    'weightlifting': Color(0xFFFF6348),
-    'endurance': Color(0xFF48DBFB),
-    'flexibility': Color(0xFFDDA0DD),
-    'rehab': Color(0xFF85C1E9),
-    'boxing': Color(0xFFF7DC6F),
-    'pilates': Color(0xFFBB8FCE),
-    'functional': Color(0xFF7FB3D3),
-  };
-
-  static Color getFitnessColor(String category, {Color defaultColor = primaryColor}) {
-    return fitnessColors[category.toLowerCase()] ?? defaultColor;
-  }
-
-  // Fitness Gradient Mapping
-  static Map<String, Gradient> fitnessGradients = {
-    'strength': LinearGradient(colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
-    'cardio': LinearGradient(colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)]),
-    'yoga': LinearGradient(colors: [Color(0xFFA0D8B3), Color(0xFF7BCCB5)]),
-    'crossfit': LinearGradient(colors: [Color(0xFFFFB347), Color(0xFFFFCC33)]),
-  };
-
-  static Gradient getFitnessGradient(String category, {Gradient? defaultGradient}) {
-    return fitnessGradients[category.toLowerCase()] ?? defaultGradient ?? primaryGradient;
   }
 }

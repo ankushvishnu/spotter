@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../../services/trainer_service.dart';
 import '../../models/trainer_model.dart';
 import '../../config/theme.dart';
+import '../../services/messaging_service.dart';
+import '../messaging/chat_screen.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../booking/booking_request_modal.dart';
 
 class TrainerDetailScreen extends StatefulWidget {
   final String trainerId;
@@ -550,11 +555,39 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
               child: IconButton(
                 icon: const Icon(Icons.chat_bubble_rounded),
                 color: AppTheme.primaryColor,
-                onPressed: () {
-                  // TODO: Open chat
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Messaging coming soon!')),
-                  );
+                onPressed: () async {
+                  final currentUser = context.read<AuthProvider>().user;
+                  if (currentUser == null || _trainer == null) return;
+
+                  try {
+                    // Get or create conversation
+                    final messagingService = MessagingService();
+                    final conversationId = await messagingService.getOrCreateConversation(
+                      userId1: currentUser.id,
+                      userId2: _trainer!.userId,
+                    );
+
+                    // Navigate to chat
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                            conversationId: conversationId,
+                            otherUserId: _trainer!.userId,
+                            otherUserName: _trainer!.fullName,
+                            otherUserAvatar: null,
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error opening chat: $e')),
+                      );
+                    }
+                  }
                 },
               ),
             ),
@@ -565,49 +598,13 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   }
 
   void _showBookingSheet() {
+    if (_trainer == null) return;
+    
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.textSecondary.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Book a Session',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Booking feature coming soon!\nYou\'ll be able to:\n\n• Choose date & time\n• Select session duration\n• Pick training location\n• Make secure payments',
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('GOT IT'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => BookingRequestModal(trainer: _trainer!),
     );
   }
 

@@ -71,14 +71,8 @@ class AuthWrapper extends StatelessWidget {
               child: child,
             );
           },
-          child: Text(
-            'Spotter',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
-          ),
         ),
-        const SizedBox(height: AppTheme.spacingSM),
+        SizedBox(height: AppTheme.spacingSM),
 
         // Loading indicator with gradient
         SizedBox(
@@ -90,7 +84,7 @@ class AuthWrapper extends StatelessWidget {
             valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
           ),
         ),
-        const SizedBox(height: AppTheme.spacingMD),
+        SizedBox(height: AppTheme.spacingMD),
 
         // Animated dots
         SizedBox(
