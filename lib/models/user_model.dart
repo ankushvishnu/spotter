@@ -1,3 +1,5 @@
+import '../utils/geo_utils.dart';
+
 class UserModel {
   final String id;
   final String email;
@@ -64,7 +66,7 @@ class UserModel {
       gender: json['gender'],
       bio: json['bio'],
       location: json['location'] != null
-          ? _parseLocation(json['location'])
+          ? GeoUtils.parsePostGISLocation(json['location'])
           : null,
       address: json['address'],
       city: json['city'],
@@ -119,72 +121,53 @@ class UserModel {
 
   UserModel copyWith({
     String? fullName,
+    String? phone,
     String? avatarUrl,
+    DateTime? dateOfBirth,
+    String? gender,
     String? bio,
+    Map<String, double>? location,
+    String? address,
     String? city,
+    String? state,
+    String? pincode,
     List<String>? fitnessGoals,
     String? fitnessLevel,
     List<String>? preferredSpecialties,
     int? budgetMin,
     int? budgetMax,
+    String? role,
+    bool? isVerified,
+    bool? emailVerified,
+    String? subscriptionTier,
+    DateTime? subscriptionExpiresAt,
   }) {
     return UserModel(
       id: id,
       email: email,
-      phone: phone,
+      phone: phone ?? this.phone,
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      dateOfBirth: dateOfBirth,
-      gender: gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
       bio: bio ?? this.bio,
-      location: location,
-      address: address,
+      location: location ?? this.location,
+      address: address ?? this.address,
       city: city ?? this.city,
-      state: state,
-      pincode: pincode,
+      state: state ?? this.state,
+      pincode: pincode ?? this.pincode,
       fitnessGoals: fitnessGoals ?? this.fitnessGoals,
       fitnessLevel: fitnessLevel ?? this.fitnessLevel,
       preferredSpecialties: preferredSpecialties ?? this.preferredSpecialties,
       budgetMin: budgetMin ?? this.budgetMin,
       budgetMax: budgetMax ?? this.budgetMax,
-      role: role,
-      isVerified: isVerified,
-      emailVerified: emailVerified,
-      subscriptionTier: subscriptionTier,
-      subscriptionExpiresAt: subscriptionExpiresAt,
+      role: role ?? this.role,
+      isVerified: isVerified ?? this.isVerified,
+      emailVerified: emailVerified ?? this.emailVerified,
+      subscriptionTier: subscriptionTier ?? this.subscriptionTier,
+      subscriptionExpiresAt: subscriptionExpiresAt ?? this.subscriptionExpiresAt,
       createdAt: createdAt,
     );
   }
 
-  // Helper method to parse PostGIS location
-  static Map<String, double>? _parseLocation(dynamic location) {
-    try {
-      if (location == null) return null;
-      
-      // Handle different PostGIS response formats
-      if (location is Map) {
-        if (location.containsKey('coordinates')) {
-          final coords = location['coordinates'];
-          if (coords is List && coords.length >= 2) {
-            return {
-              'lng': _toDouble(coords[0]),
-              'lat': _toDouble(coords[1]),
-            };
-          }
-        }
-      }
-      
-      return null;
-    } catch (e) {
-      print('Error parsing location: $e');
-      return null;
-    }
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.parse(value);
-    return 0.0;
-  }
 }

@@ -1,3 +1,5 @@
+import '../utils/time_utils.dart';
+
 class MessageModel {
   final String id;
   final String conversationId;
@@ -71,26 +73,7 @@ class MessageModel {
 
   bool get isDeleted => deletedAt != null;
 
-  String get timeAgo {
-    final now = DateTime.now();
-    final difference = now.difference(createdAt);
+  String get timeAgo => TimeUtils.timeAgo(createdAt);
 
-    if (difference.inSeconds < 60) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
-    }
-  }
-
-  String get formattedTime {
-    final hour = createdAt.hour.toString().padLeft(2, '0');
-    final minute = createdAt.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
+  String get formattedTime => TimeUtils.formatTime(createdAt);
 }

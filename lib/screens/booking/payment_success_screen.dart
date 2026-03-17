@@ -52,12 +52,11 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(AppTheme.spacingLG),
-            child: Column(
-              children: [
-                SizedBox(height: AppTheme.spacingXXL),
+        child: Padding(
+          padding: EdgeInsets.all(AppTheme.spacingLG),
+          child: Column(
+            children: [
+              const Spacer(),
 
               // Success Icon
               ScaleTransition(
@@ -210,7 +209,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
           ),
         ),
       ),
-    ));
+    );
   }
 
   Widget _buildDetailRow({

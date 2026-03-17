@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/user_model.dart';
+import '../utils/app_exception.dart';
 
 class AuthService {
   final _supabase = SupabaseConfig.client;
@@ -17,14 +19,17 @@ class AuthService {
     required String password,
     required String fullName,
   }) async {
-    // User profile is automatically created by database trigger
-    final response = await _supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: {'full_name': fullName},
-    );
-
-    return response;
+    try {
+      // User profile is automatically created by database trigger
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {'full_name': fullName},
+      );
+      return response;
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to create account.');
+    }
   }
 
   // Sign In
@@ -32,38 +37,59 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return await _supabase.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      return await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to sign in.');
+    }
   }
 
   // Sign Out
   Future<void> signOut() async {
-    await _supabase.auth.signOut();
+    try {
+      await _supabase.auth.signOut();
+    } catch (e) {
+      debugPrint('Sign out error: $e');
+      // Don't throw — allow sign out to proceed even if network fails
+    }
   }
 
   // Reset Password
   Future<void> resetPassword(String email) async {
-    await _supabase.auth.resetPasswordForEmail(email);
+    try {
+      await _supabase.auth.resetPasswordForEmail(email);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to send reset email.');
+    }
   }
 
   // Update Password
   Future<UserResponse> updatePassword(String newPassword) async {
-    return await _supabase.auth.updateUser(
-      UserAttributes(password: newPassword),
-    );
+    try {
+      return await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to update password.');
+    }
   }
 
   // Get User Profile
   Future<UserModel?> getUserProfile(String userId) async {
-    final response = await _supabase
-        .from('users')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
 
-    if (response == null) return null;
-    return UserModel.fromJson(response);
+      if (response == null) return null;
+      return UserModel.fromJson(response);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to load profile.');
+    }
   }
 }

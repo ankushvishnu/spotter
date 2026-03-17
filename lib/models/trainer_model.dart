@@ -1,3 +1,5 @@
+import '../utils/geo_utils.dart';
+
 class TrainerModel {
   final String id;
   final String userId;
@@ -52,7 +54,7 @@ class TrainerModel {
       bio: json['bio'],
       city: json['city'],
       location: json['location'] != null
-          ? _parseLocation(json['location'])
+          ? GeoUtils.parsePostGISLocation(json['location'])
           : null,
       specialties: List<String>.from(json['specialties']),
       yearsOfExperience: json['years_of_experience'],
@@ -100,35 +102,4 @@ class TrainerModel {
 
   String get ratingDisplay => averageRating.toStringAsFixed(1);
 
-  // Helper method to parse PostGIS location
-  static Map<String, double>? _parseLocation(dynamic location) {
-    try {
-      if (location == null) return null;
-      
-      // Handle different PostGIS response formats
-      if (location is Map) {
-        if (location.containsKey('coordinates')) {
-          final coords = location['coordinates'];
-          if (coords is List && coords.length >= 2) {
-            return {
-              'lng': _toDouble(coords[0]),
-              'lat': _toDouble(coords[1]),
-            };
-          }
-        }
-      }
-      
-      return null;
-    } catch (e) {
-      print('Error parsing location: $e');
-      return null;
-    }
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.parse(value);
-    return 0.0;
-  }
 }

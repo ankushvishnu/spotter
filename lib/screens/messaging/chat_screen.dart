@@ -25,7 +25,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final MessagingService _messagingService = MessagingService();
+  late final MessagingService _messagingService;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
@@ -37,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _messagingService = context.read<MessagingService>();
     _loadMessages();
     _subscribeToMessages();
   }
@@ -182,9 +183,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   Text(
-                    'Active now',
+                    'Offline',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.primaryColor,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
                 ],

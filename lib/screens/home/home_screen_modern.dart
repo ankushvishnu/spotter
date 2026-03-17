@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/trainer_service.dart';
 import '../../models/trainer_model.dart';
-import '../trainers/trainer_detail_screen_modern.dart';
+import '../../widgets/trainer_card.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../messaging/conversations_screen.dart';
@@ -18,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  final TrainerService _trainerService = TrainerService();
+  late final TrainerService _trainerService;
   List<TrainerModel> _trainers = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _trainerService = context.read<TrainerService>();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -118,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final trainer = _trainers[index];
-                      return ModernTrainerCard(
+                      return TrainerCard(
                         trainer: trainer,
                         animation: _animationController,
                         index: index,
@@ -242,7 +243,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Expanded(
             child: _buildStatCard(
               icon: Icons.star_rounded,
-              value: '4.8',
+              value: _trainers.isNotEmpty
+                  ? (_trainers.fold<double>(0, (sum, t) => sum + t.averageRating) / _trainers.length).toStringAsFixed(1)
+                  : '–',
               label: 'Avg Rating',
               color: AppTheme.warningColor,
             ),
@@ -251,7 +254,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Expanded(
             child: _buildStatCard(
               icon: Icons.local_fire_department_rounded,
-              value: '150+',
+              value: _trainers.isNotEmpty
+                  ? '${_trainers.fold<int>(0, (sum, t) => sum + t.totalSessionsCompleted)}+'
+                  : '–',
               label: 'Sessions',
               color: AppTheme.secondaryColor,
             ),
@@ -345,8 +350,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             context,
             MaterialPageRoute(builder: (context) => const ProfileScreen()),
           );
+        } else if (index == 1) {
+          // Navigate to Explore/Search screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SearchScreen()),
+          );
         } else {
-          // Only change selectedIndex for tabs 0, 1
+          // Only change selectedIndex for tab 0 (Home)
           setState(() => _selectedIndex = index);
         }
       },
@@ -379,220 +390,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction_rounded,
-            size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Coming Soon',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Modern Trainer Card Component
-class ModernTrainerCard extends StatelessWidget {
-  final TrainerModel trainer;
-  final AnimationController animation;
-  final int index;
-
-  const ModernTrainerCard({
-    super.key,
-    required this.trainer,
-    required this.animation,
-    required this.index,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(
-          parent: animation,
-          curve: Interval(
-            (index * 0.1).clamp(0.0, 1.0),
-            ((index * 0.1) + 0.3).clamp(0.0, 1.0),
-            curve: Curves.easeOut,
-          ),
-        ),
-      ),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.1),
-          end: Offset.zero,
-        ).animate(
-          CurvedAnimation(
-            parent: animation,
-            curve: Interval(
-              (index * 0.1).clamp(0.0, 1.0),
-              ((index * 0.1) + 0.3).clamp(0.0, 1.0),
-              curve: Curves.easeOut,
-            ),
-          ),
-        ),
-        child: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TrainerDetailScreen(trainerId: trainer.id),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.cardColor,
-                  AppTheme.cardColor.withOpacity(0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Avatar with gradient border
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Center(
-                        child: Text(
-                          trainer.fullName[0].toUpperCase(),
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 16),
-                  
-                  // Details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          trainer.fullName,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          trainer.specialtiesDisplay,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.primaryColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.warningColor.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    size: 14,
-                                    color: AppTheme.warningColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    trainer.ratingDisplay,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.warningColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${trainer.totalReviews} reviews',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Price
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      trainer.priceDisplay,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

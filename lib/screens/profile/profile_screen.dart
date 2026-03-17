@@ -16,7 +16,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final ProfileService _profileService = ProfileService();
+  late final ProfileService _profileService;
   final ImagePicker _imagePicker = ImagePicker();
   
   UserModel? _user;
@@ -39,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _profileService = context.read<ProfileService>();
     _loadProfile();
   }
 

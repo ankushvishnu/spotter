@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'config/supabase_config.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen_modern.dart';
+import 'services/trainer_service.dart';
+import 'services/booking_service.dart';
+import 'services/messaging_service.dart';
+import 'services/profile_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
   // Initialize Supabase
   await SupabaseConfig.initialize();
@@ -23,6 +31,10 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        Provider<TrainerService>(create: (_) => TrainerService()),
+        Provider<BookingService>(create: (_) => BookingService()),
+        Provider<MessagingService>(create: (_) => MessagingService()),
+        Provider<ProfileService>(create: (_) => ProfileService()),
       ],
       child: MaterialApp(
         title: 'Spotter',

@@ -7,6 +7,7 @@ import '../messaging/chat_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../booking/booking_request_modal.dart';
+import '../../utils/booking_status_utils.dart';
 
 class TrainerDetailScreen extends StatefulWidget {
   final String trainerId;
@@ -18,7 +19,7 @@ class TrainerDetailScreen extends StatefulWidget {
 }
 
 class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
-  final TrainerService _trainerService = TrainerService();
+  late final TrainerService _trainerService;
   TrainerModel? _trainer;
   bool _isLoading = true;
   int _selectedTab = 0;
@@ -26,6 +27,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _trainerService = context.read<TrainerService>();
     _loadTrainer();
   }
 
@@ -413,13 +415,13 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
               child: Row(
                 children: [
                   Icon(
-                    _getLocationIcon(location),
+                    BookingStatusUtils.getLocationIcon(location),
                     color: AppTheme.primaryColor,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    _formatLocation(location),
+                    BookingStatusUtils.getLocationDisplay(location),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -561,7 +563,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
 
                   try {
                     // Get or create conversation
-                    final messagingService = MessagingService();
+                    final messagingService = context.read<MessagingService>();
                     final conversationId = await messagingService.getOrCreateConversation(
                       userId1: currentUser.id,
                       userId2: _trainer!.userId,
@@ -608,33 +610,4 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     );
   }
 
-  IconData _getLocationIcon(String location) {
-    switch (location) {
-      case 'trainer_space':
-        return Icons.home_work_rounded;
-      case 'client_location':
-        return Icons.home_rounded;
-      case 'park':
-        return Icons.park_rounded;
-      case 'gym':
-        return Icons.fitness_center_rounded;
-      default:
-        return Icons.location_on_rounded;
-    }
-  }
-
-  String _formatLocation(String location) {
-    switch (location) {
-      case 'trainer_space':
-        return 'Trainer\'s Studio';
-      case 'client_location':
-        return 'Your Location';
-      case 'park':
-        return 'Outdoor/Park';
-      case 'gym':
-        return 'Gym';
-      default:
-        return location;
-    }
-  }
 }

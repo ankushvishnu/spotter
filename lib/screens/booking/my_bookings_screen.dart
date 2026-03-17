@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
 import '../../models/booking_model.dart';
 import '../../config/theme.dart';
+import '../../utils/booking_status_utils.dart';
 import 'booking_detail_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class MyBookingsScreen extends StatefulWidget {
 
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
-  final BookingService _bookingService = BookingService();
+  late final BookingService _bookingService;
   late TabController _tabController;
 
   List<BookingModel> _upcomingBookings = [];
@@ -25,6 +26,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   @override
   void initState() {
     super.initState();
+    _bookingService = context.read<BookingService>();
     _tabController = TabController(length: 2, vsync: this);
     _loadBookings();
   }
@@ -210,7 +212,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _getStatusColor(booking.status).withOpacity(0.3),
+            color: BookingStatusUtils.getStatusColor(booking.status).withOpacity(0.3),
             width: 1.5,
           ),
         ),
@@ -366,8 +368,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildStatusBadge(String status) {
-    final color = _getStatusColor(status);
-    final icon = _getStatusIcon(status);
+    final color = BookingStatusUtils.getStatusColor(status);
+    final icon = BookingStatusUtils.getStatusIcon(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -382,7 +384,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
-            _getStatusText(status),
+            BookingStatusUtils.getStatusText(status),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: color,
                   fontWeight: FontWeight.bold,
@@ -425,50 +427,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return AppTheme.warningColor;
-      case 'confirmed':
-        return AppTheme.successColor;
-      case 'completed':
-        return AppTheme.accentColor;
-      case 'cancelled':
-        return AppTheme.errorColor;
-      default:
-        return AppTheme.textSecondary;
-    }
-  }
 
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.schedule_rounded;
-      case 'confirmed':
-        return Icons.check_circle_rounded;
-      case 'completed':
-        return Icons.verified_rounded;
-      case 'cancelled':
-        return Icons.cancel_rounded;
-      default:
-        return Icons.info_rounded;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status.toUpperCase();
-    }
-  }
 
   Future<void> _showCancelDialog(BookingModel booking) async {
     final confirm = await showDialog<bool>(

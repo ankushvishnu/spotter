@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/trainer_service.dart';
 import '../../models/trainer_model.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
-import '../trainers/trainer_detail_screen_modern.dart';
-
+import '../../widgets/trainer_card.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -13,7 +14,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final TrainerService _trainerService = TrainerService();
+  late final TrainerService _trainerService;
   final TextEditingController _searchController = TextEditingController();
   
   List<TrainerModel> _trainers = [];
@@ -25,15 +26,18 @@ class _SearchScreenState extends State<SearchScreen> {
   double _maxPrice = AppConstants.maxPrice.toDouble();
   double _minRating = 0.0;
   bool _showFilters = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _trainerService = context.read<TrainerService>();
     _loadAllTrainers();
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -172,7 +176,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     vertical: 16,
                   ),
                 ),
-                onChanged: (value) => _applyFilters(),
+                onChanged: (value) {
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 500), () {
+                    _applyFilters();
+                  });
+                },
               ),
             ),
           ),
@@ -392,141 +401,8 @@ class _SearchScreenState extends State<SearchScreen> {
       itemCount: _filteredTrainers.length,
       itemBuilder: (context, index) {
         final trainer = _filteredTrainers[index];
-        return _buildTrainerCard(trainer);
+        return TrainerCard(trainer: trainer);
       },
     );
   }
-
-  Widget _buildTrainerCard(TrainerModel trainer) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TrainerDetailScreen(trainerId: trainer.id),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.cardColor,
-              AppTheme.cardColor.withOpacity(0.8),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Avatar
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(2),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    trainer.fullName[0].toUpperCase(),
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trainer.fullName,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    trainer.specialtiesDisplay,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.primaryColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 16,
-                        color: AppTheme.warningColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        trainer.ratingDisplay,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.warningColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${trainer.totalReviews} reviews',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            
-            // Price
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '₹${trainer.pricePerSession}',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'per session',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+}
