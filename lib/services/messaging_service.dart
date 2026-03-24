@@ -76,6 +76,8 @@ class MessagingService {
     required String conversationId,
     required Function(Map<String, dynamic>) onNewMessage,
   }) {
+    debugPrint('🔌 [Chat] Subscribing to conversation: $conversationId');
+
     final channel = _supabase
         .channel('messages:$conversationId')
         .onPostgresChanges(
@@ -88,10 +90,17 @@ class MessagingService {
             value: conversationId,
           ),
           callback: (payload) {
+            debugPrint('✅ [Chat] New message received: ${payload.newRecord}');
             onNewMessage(payload.newRecord);
           },
         )
-        .subscribe();
+        .subscribe((status, error) {
+          if (error != null) {
+            debugPrint('❌ [Chat] Realtime subscription error: $error');
+          } else {
+            debugPrint('✅ [Chat] Realtime subscription status: $status');
+          }
+        });
 
     return channel;
   }

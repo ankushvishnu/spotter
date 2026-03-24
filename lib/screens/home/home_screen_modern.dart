@@ -44,7 +44,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _loadTrainers() async {
     setState(() => _isLoading = true);
     try {
-      final trainers = await _trainerService.getTrainers(limit: 20);
+      final userId = context.read<AuthProvider>().user?.id;
+      final trainers = await _trainerService.getTrainers(
+        limit: 20,
+        excludeUserId: userId,
+      );
       setState(() {
         _trainers = trainers;
         _isLoading = false;

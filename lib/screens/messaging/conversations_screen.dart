@@ -72,6 +72,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       padding: EdgeInsets.all(AppTheme.spacingLG),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          SizedBox(width: AppTheme.spacingSM),
           Text(
             'Messages',
             style: Theme.of(context).textTheme.headlineLarge,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/trainer_service.dart';
 import '../../models/trainer_model.dart';
 import '../../config/theme.dart';
@@ -45,7 +46,11 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _loadAllTrainers() async {
     setState(() => _isLoading = true);
     try {
-      final trainers = await _trainerService.getTrainers(limit: 100);
+      final userId = context.read<AuthProvider>().user?.id;
+      final trainers = await _trainerService.getTrainers(
+        limit: 100,
+        excludeUserId: userId,
+      );
       setState(() {
         _trainers = trainers;
         _filteredTrainers = trainers;

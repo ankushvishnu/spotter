@@ -39,6 +39,7 @@ class TrainerService {
     String? specialty,
     int? maxPrice,
     double? minRating,
+    String? excludeUserId, // Exclude a specific user (e.g., the logged-in trainer)
     int limit = AppConstants.trainersPerPage,
   }) async {
     try {
@@ -52,6 +53,9 @@ class TrainerService {
       }
       if (minRating != null) {
         query = query.gte('average_rating', minRating);
+      }
+      if (excludeUserId != null) {
+        query = query.neq('user_id', excludeUserId);
       }
 
       final response = await query
@@ -83,13 +87,18 @@ class TrainerService {
   }
 
   // Search Trainers by Name
-  Future<List<TrainerModel>> searchTrainers(String query) async {
+  Future<List<TrainerModel>> searchTrainers(String query, {String? excludeUserId}) async {
     try {
-      final response = await _supabase
+      var dbQuery = _supabase
           .from('trainer_profiles')
           .select()
-          .ilike('full_name', '%$query%')
-          .limit(20);
+          .ilike('full_name', '%$query%');
+
+      if (excludeUserId != null) {
+        dbQuery = dbQuery.neq('user_id', excludeUserId);
+      }
+
+      final response = await dbQuery.limit(20);
 
       return (response as List)
           .map((trainer) => TrainerModel.fromJson(trainer))

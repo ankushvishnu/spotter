@@ -18,13 +18,18 @@ class AuthService {
     required String email,
     required String password,
     required String fullName,
+    String role = 'client',
   }) async {
     try {
-      // User profile is automatically created by database trigger
+      // User profile is automatically created by database trigger.
+      // Role is passed via metadata so the trigger sets the correct role.
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'full_name': fullName},
+        data: {
+          'full_name': fullName,
+          'role': role,
+        },
       );
       return response;
     } catch (e) {

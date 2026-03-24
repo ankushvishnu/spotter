@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/trainer_service.dart';
+import '../../services/review_service.dart';
 import '../../models/trainer_model.dart';
+import '../../models/review_model.dart';
 import '../../config/theme.dart';
 import '../../services/messaging_service.dart';
 import '../messaging/chat_screen.dart';
@@ -20,8 +22,11 @@ class TrainerDetailScreen extends StatefulWidget {
 
 class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   late final TrainerService _trainerService;
+  final ReviewService _reviewService = ReviewService();
   TrainerModel? _trainer;
+  List<ReviewModel> _reviews = [];
   bool _isLoading = true;
+  bool _isLoadingReviews = false;
   int _selectedTab = 0;
 
   @override
@@ -49,6 +54,18 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadReviews() async {
+    if (_isLoadingReviews || _reviews.isNotEmpty) return;
+    setState(() => _isLoadingReviews = true);
+    final reviews = await _reviewService.getTrainerReviews(widget.trainerId);
+    if (mounted) {
+      setState(() {
+        _reviews = reviews;
+        _isLoadingReviews = false;
+      });
     }
   }
 
@@ -315,7 +332,10 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     final isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = index),
+        onTap: () {
+          setState(() => _selectedTab = index);
+          if (index == 2) _loadReviews();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
@@ -476,27 +496,295 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     );
   }
 
+  // ── Reviews Tab ───────────────────────────────────────────────────────────
   Widget _buildReviewsTab() {
-    return Center(
-      child: Column(
-        children: [
-          Icon(
-            Icons.rate_review_rounded,
-            size: 48,
-            color: AppTheme.textSecondary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Reviews Coming Soon',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppTheme.textSecondary,
+    if (_isLoadingReviews) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_reviews.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Icon(
+              Icons.star_border_rounded,
+              size: 56,
+              color: AppTheme.textSecondary.withOpacity(0.4),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'No Reviews Yet',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Book a session to be the first to review!',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+    }
+
+    // Rating summary
+    final avg = _reviews.fold<double>(0, (sum, r) => sum + r.rating) /
+        _reviews.length;
+    final breakdown = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+    for (final r in _reviews) {
+      breakdown[r.rating] = (breakdown[r.rating] ?? 0) + 1;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Rating Summary Card
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppTheme.cardGradient,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 8),
+          child: Row(
+            children: [
+              // Big rating number
+              Column(
+                children: [
+                  Text(
+                    avg.toStringAsFixed(1),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          color: AppTheme.warningColor,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
+                  Row(
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        i < avg.round()
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        color: AppTheme.warningColor,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_reviews.length} review${_reviews.length > 1 ? 's' : ''}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 24),
+              // Rating breakdown bars
+              Expanded(
+                child: Column(
+                  children: [5, 4, 3, 2, 1].map((star) {
+                    final count = breakdown[star] ?? 0;
+                    final fraction =
+                        _reviews.isEmpty ? 0.0 : count / _reviews.length;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Text(
+                            '$star',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.star_rounded,
+                              size: 12, color: AppTheme.warningColor),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: fraction,
+                                backgroundColor:
+                                    AppTheme.textSecondary.withOpacity(0.15),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                    AppTheme.warningColor),
+                                minHeight: 6,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$count',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Individual review cards
+        ..._reviews.map((review) => _buildReviewCard(review)),
+      ],
+    );
+  }
+
+  Widget _buildReviewCard(ReviewModel review) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Reviewer info + rating
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    review.reviewerName[0].toUpperCase(),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.backgroundColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          review.reviewerName,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        if (review.isVerified) ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.verified_rounded,
+                              color: AppTheme.accentColor, size: 14),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      review.formattedDate,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              // Stars
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: AppTheme.warningColor,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Review text
+          if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              review.reviewText!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textPrimary,
+                    height: 1.5,
+                  ),
+            ),
+          ],
+
+          // Sub-ratings
+          if (review.professionalismRating != null ||
+              review.punctualityRating != null ||
+              review.knowledgeRating != null) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (review.professionalismRating != null)
+                  _buildSubRatingChip(
+                      'Pro', review.professionalismRating!),
+                if (review.punctualityRating != null)
+                  _buildSubRatingChip(
+                      'Time', review.punctualityRating!),
+                if (review.knowledgeRating != null)
+                  _buildSubRatingChip(
+                      'Knowledge', review.knowledgeRating!),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubRatingChip(String label, int rating) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            'We\'re working on bringing you detailed reviews',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.warningColor,
+                ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.star_rounded, size: 12, color: AppTheme.warningColor),
+          const SizedBox(width: 2),
+          Text(
+            '$rating',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.warningColor,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ],
       ),

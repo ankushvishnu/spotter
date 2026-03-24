@@ -6,6 +6,7 @@ import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen_modern.dart';
+import 'screens/trainers/trainer_onboarding_screen.dart';
 import 'services/trainer_service.dart';
 import 'services/booking_service.dart';
 import 'services/messaging_service.dart';
@@ -146,7 +147,8 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (authProvider.user != null) {
-          return const HomeScreen();
+          // Check if this is a trainer who needs to complete their profile
+          return _TrainerProfileGate(userId: authProvider.user!.id);
         }
 
         return const LoginScreen();
@@ -154,3 +156,87 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
+
+/// Checks if a trainer user has a completed profile.
+/// If not, shows trainer onboarding before HomeScreen.
+class _TrainerProfileGate extends StatefulWidget {
+  final String userId;
+  const _TrainerProfileGate({required this.userId});
+
+  @override
+  State<_TrainerProfileGate> createState() => _TrainerProfileGateState();
+}
+
+class _TrainerProfileGateState extends State<_TrainerProfileGate> {
+  final _supabase = SupabaseConfig.client;
+  bool _checking = true;
+  bool _needsTrainerSetup = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTrainerProfile();
+  }
+
+  Future<void> _checkTrainerProfile() async {
+    try {
+      // 1. Get user role
+      final userRow = await _supabase
+          .from('users')
+          .select('role')
+          .eq('id', widget.userId)
+          .maybeSingle();
+
+      if (userRow?['role'] == 'trainer') {
+        // 2. Check if a trainer record exists in the `trainers` table
+        final trainerRow = await _supabase
+            .from('trainers')
+            .select('user_id')
+            .eq('user_id', widget.userId)
+            .maybeSingle();
+
+        if (trainerRow == null) {
+          setState(() {
+            _needsTrainerSetup = true;
+            _checking = false;
+          });
+          return;
+        }
+      }
+    } catch (_) {
+      // On error, let them through to home
+    }
+
+    if (mounted) setState(() => _checking = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_needsTrainerSetup) {
+      return WillPopScope(
+        // Prevent going back past onboarding
+        onWillPop: () async => false,
+        child: TrainerOnboardingScreen(
+          isEditing: false,
+          // After completing onboarding, go to home
+          onComplete: () {
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              );
+            }
+          },
+        ),
+      );
+    }
+
+    return const HomeScreen();
+  }
+}
+

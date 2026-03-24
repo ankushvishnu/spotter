@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
+import '../../services/review_service.dart';
 import '../../models/booking_model.dart';
 import '../../config/theme.dart';
+import '../reviews/create_review_screen.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
@@ -19,8 +21,10 @@ class BookingDetailScreen extends StatefulWidget {
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
   final BookingService _bookingService = BookingService();
+  final ReviewService _reviewService = ReviewService();
   BookingModel? _booking;
   bool _isLoading = true;
+  bool _hasReview = false;
 
   @override
   void initState() {
@@ -33,8 +37,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     try {
       final booking = await _bookingService.getBooking(widget.bookingId);
       if (booking != null) {
+        final model = BookingModel.fromJson(booking);
+        // Check if already reviewed (only for completed bookings)
+        bool hasReview = false;
+        if (model.isCompleted) {
+          final userId = context.read<AuthProvider>().user?.id;
+          if (userId != null) {
+            hasReview = await _reviewService.hasReviewedBooking(
+              widget.bookingId,
+              userId,
+            );
+          }
+        }
         setState(() {
-          _booking = BookingModel.fromJson(booking);
+          _booking = model;
+          _hasReview = hasReview;
           _isLoading = false;
         });
       }
@@ -115,6 +132,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           if (_booking!.isPending || _booking!.isConfirmed) ...[
             SizedBox(height: AppTheme.spacingLG),
             _buildActions(),
+          ],
+          // Rate Session button for completed and unreviewed bookings
+          if (_booking!.isCompleted && !_hasReview) ...[
+            SizedBox(height: AppTheme.spacingLG),
+            _buildRateSessionButton(),
           ],
         ],
       ),
@@ -389,6 +411,35 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildRateSessionButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateReviewScreen(
+                bookingId: _booking!.id,
+                trainerId: _booking!.trainerId,
+                trainerName: _booking!.trainerName ?? 'Trainer',
+              ),
+            ),
+          ).then((submitted) {
+            if (submitted == true) {
+              setState(() => _hasReview = true);
+            }
+          });
+        },
+        icon: const Icon(Icons.star_rounded, size: 20),
+        label: const Text('Rate This Session'),
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+        ),
+      ),
     );
   }
 

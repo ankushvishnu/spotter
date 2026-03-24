@@ -40,33 +40,65 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _loadUserProfile(String userId) async {
-    try {
-      _user = await _authService.getUserProfile(userId);
-    } catch (e) {
-      debugPrint('Error loading user profile: $e');
-      _user = null;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+  /// Loads user profile from DB.
+  /// Retries up to [maxAttempts] times to handle the case where the
+  /// `handle_new_user` DB trigger hasn't finished creating the row yet.
+  Future<void> _loadUserProfile(String userId, {int maxAttempts = 6}) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final profile = await _authService.getUserProfile(userId);
+        if (profile != null) {
+          _user = profile;
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+        // Profile not yet created by DB trigger — wait and retry
+        if (attempt < maxAttempts) {
+          await Future.delayed(const Duration(milliseconds: 600));
+        }
+      } catch (e) {
+        debugPrint('Error loading user profile (attempt $attempt): $e');
+        if (attempt < maxAttempts) {
+          await Future.delayed(const Duration(milliseconds: 600));
+        }
+      }
     }
+    // All retries exhausted — proceed without profile
+    _user = null;
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<void> signUp({
+  Future<bool> signUp({
     required String email,
     required String password,
     required String fullName,
+    String role = 'client',
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _authService.signUp(
+      final response = await _authService.signUp(
         email: email,
         password: password,
         fullName: fullName,
+        role: role,
       );
-      // Auth state listener will handle the rest
+
+      // If Supabase requires email confirmation, session is null.
+      // The auth listener won't fire with a session, so we must
+      // reset isLoading here — otherwise the app stays on the loader forever.
+      if (response.session == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false; // false = email confirmation needed
+      }
+
+      // Session exists (auto-confirm enabled):
+      // auth state listener will call _loadUserProfile which sets isLoading = false.
+      return true; // true = logged in immediately
     } catch (e) {
       _isLoading = false;
       notifyListeners();

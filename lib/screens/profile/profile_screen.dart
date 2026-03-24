@@ -3,10 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
+import '../../services/credits_service.dart';
 import '../../models/user_model.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
 import '../trainers/trainer_bookings_screen.dart';
+import '../trainers/trainer_onboarding_screen.dart';
+import '../credits/buy_credits_screen.dart';
+import '../credits/credits_history_screen.dart';
+import '../settings/settings_screen.dart';
+import '../ai/ai_agent_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,11 +23,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileService _profileService;
+  late final CreditsService _creditsService;
   final ImagePicker _imagePicker = ImagePicker();
   
   UserModel? _user;
   bool _isLoading = true;
   bool _isEditing = false;
+  int _currentCredits = 0;
 
   // Controllers
   final _nameController = TextEditingController();
@@ -40,6 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _profileService = context.read<ProfileService>();
+    _creditsService = CreditsService();
     _loadProfile();
   }
 
@@ -55,9 +64,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await _profileService.getCurrentUserProfile();
+      int credits = 0;
+      if (user != null) {
+        credits = await _creditsService.getUserCredits(user.id);
+      }
       if (user != null) {
         setState(() {
           _user = user;
+          _currentCredits = credits;
           _nameController.text = user.fullName;
           _bioController.text = user.bio ?? '';
           _phoneController.text = user.phone ?? '';
@@ -322,29 +336,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStats() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _buildStatCard(
-              icon: Icons.fitness_center_rounded,
-              value: '0',
-              label: 'Sessions',
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  icon: Icons.fitness_center_rounded,
+                  value: '0',
+                  label: 'Sessions',
+                ),
+              ),
+              SizedBox(width: AppTheme.spacingSM),
+              Expanded(
+                child: _buildStatCard(
+                  icon: Icons.star_rounded,
+                  value: '0',
+                  label: 'Reviews',
+                ),
+              ),
+              SizedBox(width: AppTheme.spacingSM),
+              Expanded(
+                child: _buildStatCard(
+                  icon: Icons.bookmark_rounded,
+                  value: '0',
+                  label: 'Saved',
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: AppTheme.spacingSM),
-          Expanded(
-            child: _buildStatCard(
-              icon: Icons.star_rounded,
-              value: '0',
-              label: 'Reviews',
-            ),
-          ),
-          SizedBox(width: AppTheme.spacingSM),
-          Expanded(
-            child: _buildStatCard(
-              icon: Icons.bookmark_rounded,
-              value: '0',
-              label: 'Saved',
+          SizedBox(height: AppTheme.spacingMD),
+          // Credits Banner
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BuyCreditsScreen(),
+                ),
+              ).then((_) => _loadProfile());
+            },
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(AppTheme.spacingMD),
+              decoration: BoxDecoration(
+                gradient: AppTheme.cardGradient,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded,
+                        color: AppTheme.primaryColor, size: 22),
+                  ),
+                  SizedBox(width: AppTheme.spacingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$_currentCredits Credit${_currentCredits != 1 ? 's' : ''}',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                        Text(
+                          'Tap to buy more session credits',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 14, color: AppTheme.textSecondary),
+                ],
+              ),
             ),
           ),
         ],
@@ -582,12 +657,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             SizedBox(height: AppTheme.spacingSM),
+            _buildActionButton(
+              icon: Icons.manage_accounts_rounded,
+              label: 'Edit Trainer Profile',
+              color: AppTheme.accentColor,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TrainerOnboardingScreen(isEditing: true),
+                  ),
+                ).then((_) => _loadProfile());
+              },
+            ),
+            SizedBox(height: AppTheme.spacingSM),
           ],
           _buildActionButton(
             icon: Icons.settings_rounded,
             label: 'Settings',
             onTap: () {
-              // TODO: Navigate to settings
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+          SizedBox(height: AppTheme.spacingSM),
+          _buildActionButton(
+            icon: Icons.receipt_long_rounded,
+            label: 'Credit History',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreditsHistoryScreen(),
+                ),
+              );
             },
           ),
           SizedBox(height: AppTheme.spacingSM),
@@ -595,7 +700,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.help_outline_rounded,
             label: 'Help & Support',
             onTap: () {
-              // TODO: Navigate to help
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AIAgentScreen()),
+              );
             },
           ),
           SizedBox(height: AppTheme.spacingSM),
@@ -624,6 +732,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               if (confirm == true && mounted) {
                 await context.read<AuthProvider>().signOut();
+                if (mounted) {
+                  // Clear entire nav stack - AuthProvider listener in main.dart
+                  // will automatically redirect to login via StreamBuilder
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
               }
             },
           ),
