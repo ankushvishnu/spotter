@@ -74,33 +74,57 @@ class MessagingService {
   // Subscribe to new messages in a conversation (real-time)
   RealtimeChannel subscribeToMessages({
     required String conversationId,
+    required String currentUserId,
     required Function(Map<String, dynamic>) onNewMessage,
+    Function(List<String>)? onPresenceChange,
   }) {
     debugPrint('🔌 [Chat] Subscribing to conversation: $conversationId');
 
-    final channel = _supabase
-        .channel('messages:$conversationId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'conversation_id',
-            value: conversationId,
-          ),
-          callback: (payload) {
-            debugPrint('✅ [Chat] New message received: ${payload.newRecord}');
-            onNewMessage(payload.newRecord);
-          },
-        )
-        .subscribe((status, error) {
-          if (error != null) {
-            debugPrint('❌ [Chat] Realtime subscription error: $error');
-          } else {
-            debugPrint('✅ [Chat] Realtime subscription status: $status');
+    final channel = _supabase.channel('messages:$conversationId');
+
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'messages',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'conversation_id',
+        value: conversationId,
+      ),
+      callback: (payload) {
+        debugPrint('✅ [Chat] New message received: ${payload.newRecord}');
+        onNewMessage(payload.newRecord);
+      },
+    );
+
+    if (onPresenceChange != null) {
+      channel.onPresenceSync((payload) {
+        final state = channel.presenceState();
+        final onlineUserIds = <String>[];
+        for (final singleState in state) {
+          for (final presence in singleState.presences) {
+            final userId = presence.payload['user_id'] as String?;
+            if (userId != null) onlineUserIds.add(userId);
           }
-        });
+        }
+        onPresenceChange(onlineUserIds);
+      });
+    }
+
+    channel.subscribe((status, error) async {
+      if (error != null) {
+        debugPrint('❌ [Chat] Realtime subscription error: $error');
+      } else {
+        debugPrint('✅ [Chat] Realtime subscription status: $status');
+        if (status == RealtimeSubscribeStatus.subscribed) {
+          try {
+            await channel.track({'user_id': currentUserId});
+          } catch (e) {
+            debugPrint('❌ [Chat] Failed to track presence: $e');
+          }
+        }
+      }
+    });
 
     return channel;
   }

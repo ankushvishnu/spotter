@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
 import '../../models/message_model.dart';
 import '../../config/theme.dart';
+import '../../services/support_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -32,6 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<MessageModel> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isOnline = false;
   RealtimeChannel? _channel;
 
   @override
@@ -75,8 +77,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _subscribeToMessages() {
+    final currentUserId = context.read<AuthProvider>().user?.id;
+    if (currentUserId == null) return;
+
     _channel = _messagingService.subscribeToMessages(
       conversationId: widget.conversationId,
+      currentUserId: currentUserId,
       onNewMessage: (message) {
         final newMessage = MessageModel.fromJson(message);
         setState(() {
@@ -84,6 +90,13 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollToBottom();
         _markAsRead();
+      },
+      onPresenceChange: (onlineUsers) {
+        if (mounted) {
+          setState(() {
+            _isOnline = onlineUsers.contains(widget.otherUserId);
+          });
+        }
       },
     );
   }
@@ -183,9 +196,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   Text(
-                    'Offline',
+                    _isOnline ? 'Online' : 'Offline',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
+                      color: _isOnline ? AppTheme.successColor : AppTheme.textSecondary,
+                      fontWeight: _isOnline ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -194,11 +208,39 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () {
-              // TODO: Show options
+            onSelected: (value) async {
+              if (value == 'report') {
+                final currentUserId = context.read<AuthProvider>().user?.id;
+                if (currentUserId == null) return;
+                
+                try {
+                  await context.read<SupportService>().submitSupportRequest(
+                    userId: currentUserId,
+                    category: 'Report Chat',
+                    description: 'Reported conversation ${widget.conversationId} with user ${widget.otherUserId} (${widget.otherUserName}).',
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chat reported successfully. Support will review it.')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to report chat: $e')),
+                    );
+                  }
+                }
+              }
             },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'report',
+                child: Text('Report User/Chat'),
+              ),
+            ],
           ),
         ],
       ),

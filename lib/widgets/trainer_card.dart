@@ -129,11 +129,21 @@ class TrainerCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      trainer.fullName,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            trainer.fullName,
+                            style: Theme.of(context).textTheme.headlineMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (trainer.verificationStatus == 'verified') ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, color: AppTheme.accentColor, size: 16),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(

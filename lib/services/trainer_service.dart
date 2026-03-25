@@ -40,6 +40,7 @@ class TrainerService {
     int? maxPrice,
     double? minRating,
     String? excludeUserId, // Exclude a specific user (e.g., the logged-in trainer)
+    bool verifiedOnly = false,
     int limit = AppConstants.trainersPerPage,
   }) async {
     try {
@@ -56,6 +57,9 @@ class TrainerService {
       }
       if (excludeUserId != null) {
         query = query.neq('user_id', excludeUserId);
+      }
+      if (verifiedOnly) {
+        query = query.eq('verification_status', 'verified');
       }
 
       final response = await query
@@ -105,6 +109,41 @@ class TrainerService {
           .toList();
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Search failed. Please try again.');
+    }
+  }
+
+  // Toggle Save Trainer
+  Future<bool> toggleSaveTrainer(String trainerId, String userId, bool isCurrentlySaved) async {
+    try {
+      if (isCurrentlySaved) {
+        await _supabase.from('saved_trainers')
+            .delete()
+            .eq('user_id', userId)
+            .eq('trainer_id', trainerId);
+        return false;
+      } else {
+        await _supabase.from('saved_trainers')
+            .insert({'user_id': userId, 'trainer_id': trainerId});
+        return true;
+      }
+    } catch (e) {
+      debugPrint('TrainerService: toggleSaveTrainer error: $e');
+      return isCurrentlySaved;
+    }
+  }
+
+  // Check if Trainer is Saved
+  Future<bool> isTrainerSaved(String trainerId, String userId) async {
+    try {
+      final response = await _supabase.from('saved_trainers')
+          .select()
+          .eq('user_id', userId)
+          .eq('trainer_id', trainerId)
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      debugPrint('TrainerService: isTrainerSaved error: $e');
+      return false;
     }
   }
 }

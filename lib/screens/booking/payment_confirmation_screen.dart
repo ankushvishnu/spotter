@@ -22,7 +22,7 @@ class PaymentConfirmationScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(AppTheme.spacingLG),
           child: Column(
             children: [
@@ -96,31 +96,31 @@ class PaymentConfirmationScreen extends StatelessWidget {
               SizedBox(height: AppTheme.spacingXL),
 
               // Payment Methods (Demo)
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildPaymentOption(
-                      context,
-                      icon: Icons.credit_card_rounded,
-                      title: 'Credit/Debit Card',
-                      subtitle: 'Visa, Mastercard, Amex',
-                    ),
-                    SizedBox(height: AppTheme.spacingMD),
-                    _buildPaymentOption(
-                      context,
-                      icon: Icons.account_balance_rounded,
-                      title: 'UPI',
-                      subtitle: 'Google Pay, PhonePe, Paytm',
-                    ),
-                    SizedBox(height: AppTheme.spacingMD),
-                    _buildPaymentOption(
-                      context,
-                      icon: Icons.account_balance_wallet_rounded,
-                      title: 'Net Banking',
-                      subtitle: 'All major banks',
-                    ),
-                  ],
-                ),
+              ListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildPaymentOption(
+                    context,
+                    icon: Icons.credit_card_rounded,
+                    title: 'Credit/Debit Card',
+                    subtitle: 'Visa, Mastercard, Amex',
+                  ),
+                  SizedBox(height: AppTheme.spacingMD),
+                  _buildPaymentOption(
+                    context,
+                    icon: Icons.account_balance_rounded,
+                    title: 'UPI',
+                    subtitle: 'Google Pay, PhonePe, Paytm',
+                  ),
+                  SizedBox(height: AppTheme.spacingMD),
+                  _buildPaymentOption(
+                    context,
+                    icon: Icons.account_balance_wallet_rounded,
+                    title: 'Net Banking',
+                    subtitle: 'All major banks',
+                  ),
+                ],
               ),
 
               SizedBox(height: AppTheme.spacingLG),

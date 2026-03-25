@@ -48,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final trainers = await _trainerService.getTrainers(
         limit: 20,
         excludeUserId: userId,
+        verifiedOnly: true,
       );
       setState(() {
         _trainers = trainers;
@@ -87,6 +88,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: _buildHeader(),
         ),
         
+        // Sticky Quick Actions
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickyQuickActionsDelegate(
+            child: Container(
+              color: AppTheme.backgroundColor,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: _buildQuickActions(),
+            ),
+          ),
+        ),
+        
         // Quick Stats
         SliverToBoxAdapter(
           child: _buildQuickStats(),
@@ -99,37 +112,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               children: [
                 Text(
-                  'Top Trainers',
+                  'Featured Trainers',
                   style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('View All'),
                 ),
               ],
             ),
           ),
         ),
         
-        // Trainers Grid
+        // Trainers Carousel
         _isLoading
             ? const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               )
-            : SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
+            : SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 340,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _trainers.length,
+                    itemBuilder: (context, index) {
                       final trainer = _trainers[index];
-                      return TrainerCard(
-                        trainer: trainer,
-                        animation: _animationController,
-                        index: index,
+                      return Container(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: TrainerCard(
+                          trainer: trainer,
+                          animation: _animationController,
+                          index: index,
+                        ),
                       );
                     },
-                    childCount: _trainers.length,
                   ),
                 ),
               ),
@@ -143,10 +157,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final user = context.watch<AuthProvider>().user;
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'SPOTTER',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
@@ -227,6 +255,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    final actions = [
+      {'icon': Icons.flash_on_rounded, 'label': 'Quick Book'},
+      {'icon': Icons.video_call_rounded, 'label': 'Online'},
+      {'icon': Icons.directions_run_rounded, 'label': 'In Person'},
+      {'icon': Icons.star_rounded, 'label': 'Top Rated'},
+    ];
+    
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final action = actions[index];
+        return Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: ElevatedButton.icon(
+            onPressed: () {},
+            icon: Icon(action['icon'] as IconData, size: 18),
+            label: Text(action['label'] as String),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.surfaceColor,
+              foregroundColor: AppTheme.textPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -398,4 +462,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
+}
+
+class _StickyQuickActionsDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyQuickActionsDelegate({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 70.0;
+
+  @override
+  double get minExtent => 70.0;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => true;
 }

@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
 import '../../models/trainer_model.dart';
 import '../../config/theme.dart';
-import 'payment_confirmation_screen.dart';
+import 'payment_success_screen.dart';
 
 class BookingRequestModal extends StatefulWidget {
   final TrainerModel trainer;
@@ -115,13 +115,13 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
       if (mounted) {
         Navigator.pop(context); // Close modal
         
-        // Navigate to payment confirmation
+        // Navigate directly to payment success since credits were deducted
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PaymentConfirmationScreen(
+            builder: (context) => PaymentSuccessScreen(
               bookingId: booking['id'] as String,
-              totalAmount: booking['total_price'] as int,
+              amount: booking['total_price'] as int,
               trainerName: widget.trainer.fullName,
             ),
           ),

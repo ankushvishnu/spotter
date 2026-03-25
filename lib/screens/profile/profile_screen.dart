@@ -8,11 +8,13 @@ import '../../models/user_model.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
 import '../trainers/trainer_bookings_screen.dart';
-import '../trainers/trainer_onboarding_screen.dart';
-import '../credits/buy_credits_screen.dart';
 import '../credits/credits_history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../ai/ai_agent_screen.dart';
+import '../credits/buy_credits_screen.dart';
+import '../support/contact_support_screen.dart';
+import '../auth/login_screen.dart';
+import '../trainers/trainer_onboarding_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -372,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const BuyCreditsScreen(),
+                  builder: (_) => BuyCreditsScreen(),
                 ),
               ).then((_) => _loadProfile());
             },
@@ -665,7 +667,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const TrainerOnboardingScreen(isEditing: true),
+                    builder: (context) => TrainerOnboardingScreen(isEditing: true),
                   ),
                 ).then((_) => _loadProfile());
               },
@@ -696,13 +698,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           SizedBox(height: AppTheme.spacingSM),
-          _buildActionButton(
+        _buildActionButton(
             icon: Icons.help_outline_rounded,
             label: 'Help & Support',
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AIAgentScreen()),
+                MaterialPageRoute(builder: (_) => const ContactSupportScreen()),
               );
             },
           ),
@@ -733,9 +735,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (confirm == true && mounted) {
                 await context.read<AuthProvider>().signOut();
                 if (mounted) {
-                  // Clear entire nav stack - AuthProvider listener in main.dart
-                  // will automatically redirect to login via StreamBuilder
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  // Clear entire navigation stack and go to login
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
                 }
               }
             },

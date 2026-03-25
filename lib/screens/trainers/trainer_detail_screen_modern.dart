@@ -27,6 +27,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   List<ReviewModel> _reviews = [];
   bool _isLoading = true;
   bool _isLoadingReviews = false;
+  bool _isSaved = false;
   int _selectedTab = 0;
 
   @override
@@ -34,6 +35,45 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     super.initState();
     _trainerService = context.read<TrainerService>();
     _loadTrainer();
+    _checkIfSaved();
+  }
+
+  Future<void> _checkIfSaved() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+    
+    final saved = await _trainerService.isTrainerSaved(widget.trainerId, userId);
+    if (mounted) setState(() => _isSaved = saved);
+  }
+
+  Future<void> _toggleSaved() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+
+    final wasSaved = _isSaved;
+    setState(() => _isSaved = !wasSaved); // Optimistic UI
+    
+    final newState = await _trainerService.toggleSaveTrainer(widget.trainerId, userId, wasSaved);
+    
+    if (newState == wasSaved) {
+      // It failed, revert
+      if (mounted) setState(() => _isSaved = wasSaved);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorites')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newState ? 'Trainer saved to favorites' : 'Removed from favorites'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadTrainer() async {
@@ -121,11 +161,12 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
               color: AppTheme.surfaceColor.withOpacity(0.8),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.favorite_border, color: AppTheme.primaryColor),
+            child: Icon(
+              _isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: AppTheme.primaryColor,
+            ),
           ),
-          onPressed: () {
-            // TODO: Add to favorites
-          },
+          onPressed: _toggleSaved,
         ),
         const SizedBox(width: 8),
       ],
@@ -184,9 +225,19 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Name
-          Text(
-            _trainer!.fullName,
-            style: Theme.of(context).textTheme.displayMedium,
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  _trainer!.fullName,
+                  style: Theme.of(context).textTheme.displayMedium,
+                ),
+              ),
+              if (_trainer!.verificationStatus == 'verified') ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.verified_rounded, color: AppTheme.accentColor, size: 32),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
           

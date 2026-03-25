@@ -23,6 +23,7 @@ class BookingService {
     try {
       final totalPrice = basePrice + platformFee;
 
+      // 1. Create booking first (so we have booking_id)
       final response = await _supabase.from('bookings').insert({
         'client_id': clientId,
         'trainer_id': trainerId,
@@ -40,8 +41,22 @@ class BookingService {
         'status': 'pending',
       }).select().single();
 
+      // 2. Deduct credits via RPC
+      try {
+        await _supabase.rpc('use_user_credits', params: {
+          'user_id': clientId,
+          'booking_id': response['id'],
+          'credits': totalPrice,
+        });
+      } catch (rpcError) {
+        // Rollback booking if credit deduction fails
+        await _supabase.from('bookings').delete().eq('id', response['id']);
+        throw AppException('Insufficient balance. You do not have enough credits to book this session.');
+      }
+
       return response;
     } catch (e) {
+      if (e is AppException) rethrow;
       throw AppException.fromError(e, fallbackMessage: 'Failed to create booking.');
     }
   }
