@@ -11,6 +11,7 @@ import 'services/trainer_service.dart';
 import 'services/booking_service.dart';
 import 'services/messaging_service.dart';
 import 'services/profile_service.dart';
+import 'services/support_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         Provider<BookingService>(create: (_) => BookingService()),
         Provider<MessagingService>(create: (_) => MessagingService()),
         Provider<ProfileService>(create: (_) => ProfileService()),
+        Provider<SupportService>(create: (_) => SupportService()),
       ],
       child: MaterialApp(
         title: 'Spotter',

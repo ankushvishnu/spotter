@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final trainers = await _trainerService.getTrainers(
         limit: 20,
         excludeUserId: userId,
-        verifiedOnly: true,
       );
       setState(() {
         _trainers = trainers;
@@ -73,8 +72,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final user = context.watch<AuthProvider>().user;
 
     return Scaffold(
-      body: SafeArea(
-        child: _buildHomeTab(), // Always show home, navigation happens via Navigator.push
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          SafeArea(child: _buildHomeTab()),
+          const SearchScreen(),
+          const ConversationsScreen(),
+          const MyBookingsScreen(),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: _buildModernBottomNav(),
     );
@@ -400,34 +406,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index == 2) {
-          // Navigate to Messages screen - DON'T change selectedIndex
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
-          );
-        } else if (index == 3) {
-          // Navigate to Bookings screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-          );
-        } else if (index == 4) {
-          // Navigate to Profile screen - DON'T change selectedIndex  
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
-          );
-        } else if (index == 1) {
-          // Navigate to Explore/Search screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SearchScreen()),
-          );
-        } else {
-          // Only change selectedIndex for tab 0 (Home)
-          setState(() => _selectedIndex = index);
-        }
+        setState(() => _selectedIndex = index);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

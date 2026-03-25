@@ -41,13 +41,18 @@ class BookingService {
         'status': 'pending',
       }).select().single();
 
-      // 2. Deduct credits via RPC
+      // 2. Deduct credits via client-side logic since RPC is missing
       try {
-        await _supabase.rpc('use_user_credits', params: {
-          'user_id': clientId,
-          'booking_id': response['id'],
-          'credits': totalPrice,
-        });
+        final userData = await _supabase.from('users').select('credits').eq('id', clientId).single();
+        final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
+        
+        if (currentCredits < totalPrice) {
+          throw AppException('Insufficient balance.');
+        }
+        
+        await _supabase.from('users').update({
+          'credits': currentCredits - totalPrice,
+        }).eq('id', clientId);
       } catch (rpcError) {
         // Rollback booking if credit deduction fails
         await _supabase.from('bookings').delete().eq('id', response['id']);
