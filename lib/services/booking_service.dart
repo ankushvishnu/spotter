@@ -22,14 +22,24 @@ class BookingService {
     try {
       final totalPrice = basePrice + platformFee;
 
-      // 1. Check credits first BEFORE creating the booking
+      // 1. Check credits from user_credits table
       debugPrint('💳 [Booking] Checking credits for user: $clientId');
-      final userData = await _supabase.from('users').select('credits').eq('id', clientId).single();
-      final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
-      debugPrint('💳 [Booking] Current credits: $currentCredits, Required: $totalPrice');
-      
-      if (currentCredits < totalPrice) {
-        throw AppException('Insufficient credits. You have $currentCredits credits but need $totalPrice.');
+      final creditData = await _supabase
+          .from('user_credits')
+          .select('id, total_credits, used_credits, available_credits')
+          .eq('user_id', clientId)
+          .maybeSingle();
+
+      if (creditData == null) {
+        throw AppException('No credits found. Please purchase credits first.');
+      }
+
+      final availableCredits = (creditData['available_credits'] as num?)?.toInt() ?? 0;
+      final currentUsed = (creditData['used_credits'] as num?)?.toInt() ?? 0;
+      debugPrint('💳 [Booking] Available credits: $availableCredits, Required: $totalPrice');
+
+      if (availableCredits < totalPrice) {
+        throw AppException('Insufficient credits. You have $availableCredits credits but need $totalPrice.');
       }
 
       // 2. Create booking
@@ -52,12 +62,23 @@ class BookingService {
       }).select().single();
       debugPrint('✅ [Booking] Booking created: ${response['id']}');
 
-      // 3. Deduct credits
+      // 3. Deduct credits by incrementing used_credits in user_credits table
       debugPrint('💳 [Booking] Deducting $totalPrice credits...');
-      await _supabase.from('users').update({
-        'credits': currentCredits - totalPrice,
-      }).eq('id', clientId);
-      debugPrint('✅ [Booking] Credits deducted successfully. Remaining: ${currentCredits - totalPrice}');
+      await _supabase.from('user_credits').update({
+        'used_credits': currentUsed + totalPrice,
+        'last_usage_at': DateTime.now().toIso8601String(),
+      }).eq('user_id', clientId);
+      debugPrint('✅ [Booking] Credits deducted. Remaining: ${availableCredits - totalPrice}');
+
+      // 4. Log credit transaction for audit trail
+      await _supabase.from('credit_transactions').insert({
+        'user_id': clientId,
+        'transaction_type': 'usage',
+        'credits': totalPrice,
+        'description': 'Booking session',
+        'booking_id': response['id'],
+      });
+      debugPrint('✅ [Booking] Credit transaction logged.');
 
       return response;
     } catch (e) {
