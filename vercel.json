@@ -1,4 +1,7 @@
 {
+  "buildCommand": "sh build.sh",
+  "outputDirectory": "build/web",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
