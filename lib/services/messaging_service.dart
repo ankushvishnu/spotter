@@ -101,10 +101,10 @@ class MessagingService {
       channel.onPresenceSync((payload) {
         final state = channel.presenceState();
         final onlineUserIds = <String>[];
-        for (final presence in state) {
-          final payload = presence.payload;
-          if (payload != null && payload['user_id'] != null) {
-            onlineUserIds.add(payload['user_id'] as String);
+        for (final singleState in state) {
+          for (final presence in singleState.presences) {
+            final userId = presence.payload['user_id'] as String?;
+            if (userId != null) onlineUserIds.add(userId);
           }
         }
         onPresenceChange(onlineUserIds);
