@@ -6,7 +6,6 @@ import '../utils/app_exception.dart';
 class BookingService {
   final _supabase = SupabaseConfig.client;
 
-  // Create a new booking
   Future<Map<String, dynamic>> createBooking({
     required String clientId,
     required String trainerId,
@@ -23,7 +22,18 @@ class BookingService {
     try {
       final totalPrice = basePrice + platformFee;
 
-      // 1. Create booking first (so we have booking_id)
+      // 1. Check credits first BEFORE creating the booking
+      debugPrint('💳 [Booking] Checking credits for user: $clientId');
+      final userData = await _supabase.from('users').select('credits').eq('id', clientId).single();
+      final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
+      debugPrint('💳 [Booking] Current credits: $currentCredits, Required: $totalPrice');
+      
+      if (currentCredits < totalPrice) {
+        throw AppException('Insufficient credits. You have $currentCredits credits but need $totalPrice.');
+      }
+
+      // 2. Create booking
+      debugPrint('📝 [Booking] Creating booking...');
       final response = await _supabase.from('bookings').insert({
         'client_id': clientId,
         'trainer_id': trainerId,
@@ -40,29 +50,20 @@ class BookingService {
         'total_price': totalPrice,
         'status': 'pending',
       }).select().single();
+      debugPrint('✅ [Booking] Booking created: ${response['id']}');
 
-      // 2. Deduct credits via client-side logic since RPC is missing
-      try {
-        final userData = await _supabase.from('users').select('credits').eq('id', clientId).single();
-        final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
-        
-        if (currentCredits < totalPrice) {
-          throw AppException('Insufficient balance.');
-        }
-        
-        await _supabase.from('users').update({
-          'credits': currentCredits - totalPrice,
-        }).eq('id', clientId);
-      } catch (rpcError) {
-        // Rollback booking if credit deduction fails
-        await _supabase.from('bookings').delete().eq('id', response['id']);
-        throw AppException('Insufficient balance. You do not have enough credits to book this session.');
-      }
+      // 3. Deduct credits
+      debugPrint('💳 [Booking] Deducting $totalPrice credits...');
+      await _supabase.from('users').update({
+        'credits': currentCredits - totalPrice,
+      }).eq('id', clientId);
+      debugPrint('✅ [Booking] Credits deducted successfully. Remaining: ${currentCredits - totalPrice}');
 
       return response;
     } catch (e) {
+      debugPrint('❌ [Booking] Error: $e');
       if (e is AppException) rethrow;
-      throw AppException.fromError(e, fallbackMessage: 'Failed to create booking.');
+      throw AppException.fromError(e, fallbackMessage: 'Failed to create booking: $e');
     }
   }
 
