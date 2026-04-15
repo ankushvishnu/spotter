@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../booking/booking_request_modal.dart';
 import '../../utils/booking_status_utils.dart';
+import '../../utils/image_utils.dart';
+import '../../widgets/auth_guard.dart';
 
 class TrainerDetailScreen extends StatefulWidget {
   final String trainerId;
@@ -29,6 +31,14 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   bool _isLoadingReviews = false;
   bool _isSaved = false;
   int _selectedTab = 0;
+  final PageController _photoPageController = PageController();
+  int _currentPhotoIndex = 0;
+
+  @override
+  void dispose() {
+    _photoPageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -138,6 +148,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
   }
 
   Widget _buildAppBar() {
+    final photos = _trainer!.profilePhotos ?? [];
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
@@ -146,7 +157,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.surfaceColor.withOpacity(0.8),
+            color: AppTheme.surfaceColor.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
@@ -158,7 +169,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withOpacity(0.8),
+              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -174,30 +185,22 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // Hero Image Placeholder
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primaryColor.withOpacity(0.3),
-                    AppTheme.accentColor.withOpacity(0.3),
-                  ],
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  _trainer!.fullName[0].toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 120,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.surfaceColor,
-                  ),
-                ),
-              ),
-            ),
-            // Gradient Overlay
+            // Photo carousel (or fallback gradient)
+            photos.isNotEmpty
+                ? PageView.builder(
+                    controller: _photoPageController,
+                    itemCount: photos.length,
+                    onPageChanged: (i) => setState(() => _currentPhotoIndex = i),
+                    itemBuilder: (context, index) {
+                      return Image.network(
+                        corsProxyUrl(photos[index]),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPhotoPlaceholder(),
+                      );
+                    },
+                  )
+                : _buildPhotoPlaceholder(),
+            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -205,14 +208,62 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    AppTheme.backgroundColor.withOpacity(0.8),
+                    AppTheme.backgroundColor.withValues(alpha: 0.8),
                     AppTheme.backgroundColor,
                   ],
                   stops: const [0.0, 0.7, 1.0],
                 ),
               ),
             ),
+            // Page indicator dots
+            if (photos.length > 1)
+              Positioned(
+                bottom: 16,
+                left: 0, right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(photos.length, (i) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: _currentPhotoIndex == i ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _currentPhotoIndex == i
+                            ? AppTheme.primaryColor
+                            : Colors.white.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }),
+                ),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.3),
+            AppTheme.accentColor.withValues(alpha: 0.3),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          _trainer!.fullName[0].toUpperCase(),
+          style: const TextStyle(
+            fontSize: 120,
+            fontWeight: FontWeight.w900,
+            color: AppTheme.surfaceColor,
+          ),
         ),
       ),
     );
@@ -249,10 +300,10 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.15),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -311,7 +362,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.15),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -457,7 +508,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                   color: AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -525,7 +576,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.successColor.withOpacity(0.15),
+                  color: AppTheme.successColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -566,7 +617,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
             Icon(
               Icons.star_border_rounded,
               size: 56,
-              color: AppTheme.textSecondary.withOpacity(0.4),
+              color: AppTheme.textSecondary.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -656,7 +707,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                                     ),
                           ),
                           const SizedBox(width: 6),
-                          Icon(Icons.star_rounded,
+                          const Icon(Icons.star_rounded,
                               size: 12, color: AppTheme.warningColor),
                           const SizedBox(width: 6),
                           Expanded(
@@ -665,7 +716,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                               child: LinearProgressIndicator(
                                 value: fraction,
                                 backgroundColor:
-                                    AppTheme.textSecondary.withOpacity(0.15),
+                                    AppTheme.textSecondary.withValues(alpha: 0.15),
                                 valueColor: const AlwaysStoppedAnimation<Color>(
                                     AppTheme.warningColor),
                                 minHeight: 6,
@@ -815,7 +866,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.warningColor.withOpacity(0.12),
+        color: AppTheme.warningColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -828,7 +879,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
                 ),
           ),
           const SizedBox(width: 4),
-          Icon(Icons.star_rounded, size: 12, color: AppTheme.warningColor),
+          const Icon(Icons.star_rounded, size: 12, color: AppTheme.warningColor),
           const SizedBox(width: 2),
           Text(
             '$rating',
@@ -849,7 +900,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
         color: AppTheme.surfaceColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -879,7 +930,13 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  _showBookingSheet();
+                  AuthGuard.protect(
+                    context,
+                    intent: 'book a session',
+                    onAuthenticated: () {
+                      _showBookingSheet();
+                    },
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -890,45 +947,51 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
             const SizedBox(width: 12),
             Container(
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.15),
+                color: AppTheme.primaryColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: IconButton(
                 icon: const Icon(Icons.chat_bubble_rounded),
                 color: AppTheme.primaryColor,
-                onPressed: () async {
-                  final currentUser = context.read<AuthProvider>().user;
-                  if (currentUser == null || _trainer == null) return;
+                onPressed: () {
+                  AuthGuard.protect(
+                    context,
+                    intent: 'message this trainer',
+                    onAuthenticated: () async {
+                      final currentUser = context.read<AuthProvider>().user;
+                      if (currentUser == null || _trainer == null) return;
 
-                  try {
-                    // Get or create conversation
-                    final messagingService = context.read<MessagingService>();
-                    final conversationId = await messagingService.getOrCreateConversation(
-                      userId1: currentUser.id,
-                      userId2: _trainer!.userId,
-                    );
+                      try {
+                        // Get or create conversation
+                        final messagingService = context.read<MessagingService>();
+                        final conversationId = await messagingService.getOrCreateConversation(
+                          userId1: currentUser.id,
+                          userId2: _trainer!.userId,
+                        );
 
-                    // Navigate to chat
-                    if (mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            conversationId: conversationId,
-                            otherUserId: _trainer!.userId,
-                            otherUserName: _trainer!.fullName,
-                            otherUserAvatar: null,
-                          ),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error opening chat: $e')),
-                      );
-                    }
-                  }
+                        // Navigate to chat
+                        if (mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                conversationId: conversationId,
+                                otherUserId: _trainer!.userId,
+                                otherUserName: _trainer!.fullName,
+                                otherUserAvatar: null,
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error opening chat: $e')),
+                          );
+                        }
+                      }
+                    },
+                  );
                 },
               ),
             ),
@@ -943,9 +1006,14 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => BookingRequestModal(trainer: _trainer!),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: BookingRequestModal(trainer: _trainer!),
+      ),
     );
   }
 

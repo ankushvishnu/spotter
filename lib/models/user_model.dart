@@ -23,8 +23,10 @@ class UserModel {
   final bool isVerified;
   final bool emailVerified;
   final String subscriptionTier;
+  final String tier; // standard, pro, elite
   final DateTime? subscriptionExpiresAt;
   final DateTime createdAt;
+  final bool isOnboarded;
 
   UserModel({
     required this.id,
@@ -49,8 +51,10 @@ class UserModel {
     this.isVerified = false,
     this.emailVerified = false,
     this.subscriptionTier = 'free',
+    this.tier = 'standard',
     this.subscriptionExpiresAt,
     required this.createdAt,
+    this.isOnboarded = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -85,10 +89,12 @@ class UserModel {
       isVerified: json['is_verified'] ?? false,
       emailVerified: json['email_verified'] ?? false,
       subscriptionTier: json['subscription_tier'] ?? 'free',
+      tier: json['tier'] ?? 'standard',
       subscriptionExpiresAt: json['subscription_expires_at'] != null
           ? DateTime.parse(json['subscription_expires_at'])
           : null,
       createdAt: DateTime.parse(json['created_at']),
+      isOnboarded: json['is_onboarded'] ?? false,
     );
   }
 
@@ -115,7 +121,9 @@ class UserModel {
       'is_verified': isVerified,
       'email_verified': emailVerified,
       'subscription_tier': subscriptionTier,
+      'tier': tier,
       'subscription_expires_at': subscriptionExpiresAt?.toIso8601String(),
+      'is_onboarded': isOnboarded,
     };
   }
 
@@ -140,7 +148,9 @@ class UserModel {
     bool? isVerified,
     bool? emailVerified,
     String? subscriptionTier,
+    String? tier,
     DateTime? subscriptionExpiresAt,
+    bool? isOnboarded,
   }) {
     return UserModel(
       id: id,
@@ -165,8 +175,10 @@ class UserModel {
       isVerified: isVerified ?? this.isVerified,
       emailVerified: emailVerified ?? this.emailVerified,
       subscriptionTier: subscriptionTier ?? this.subscriptionTier,
+      tier: tier ?? this.tier,
       subscriptionExpiresAt: subscriptionExpiresAt ?? this.subscriptionExpiresAt,
       createdAt: createdAt,
+      isOnboarded: isOnboarded ?? this.isOnboarded,
     );
   }
 

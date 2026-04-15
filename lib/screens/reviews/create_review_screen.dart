@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/review_service.dart';
 import '../../config/theme.dart';
+import '../../utils/app_exception.dart';
 
 class CreateReviewScreen extends StatefulWidget {
   final String bookingId;
@@ -77,7 +78,10 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     } finally {
@@ -93,14 +97,14 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header card
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(AppTheme.spacingXL),
+              padding: const EdgeInsets.all(AppTheme.spacingXL),
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(24),
@@ -112,7 +116,7 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: AppTheme.backgroundColor.withOpacity(0.3),
+                      color: AppTheme.backgroundColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
@@ -125,46 +129,46 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: AppTheme.spacingMD),
+                  const SizedBox(height: AppTheme.spacingMD),
                   Text(
                     'How was your session?',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: AppTheme.backgroundColor,
                     ),
                   ),
-                  SizedBox(height: AppTheme.spacingXS),
+                  const SizedBox(height: AppTheme.spacingXS),
                   Text(
                     'with ${widget.trainerName}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.backgroundColor.withOpacity(0.8),
+                      color: AppTheme.backgroundColor.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
               ),
             ),
 
-            SizedBox(height: AppTheme.spacingXL),
+            const SizedBox(height: AppTheme.spacingXL),
 
             // Overall Rating
             Text(
               'Overall Rating *',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             _buildStarRating(
               _overallRating,
               large: true,
               onChanged: (r) => setState(() => _overallRating = r),
             ),
 
-            SizedBox(height: AppTheme.spacingXL),
+            const SizedBox(height: AppTheme.spacingXL),
 
             // Review Text
             Text(
               'Write a Review (optional)',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             TextField(
               controller: _reviewController,
               maxLines: 4,
@@ -174,14 +178,14 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
               ),
             ),
 
-            SizedBox(height: AppTheme.spacingXL),
+            const SizedBox(height: AppTheme.spacingXL),
 
             // Sub-ratings
             Text(
               'Rate Specific Areas (optional)',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             _buildCategoryRatingRow(
               label: 'Professionalism',
@@ -189,14 +193,14 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
               rating: _professionalismRating,
               onChanged: (r) => setState(() => _professionalismRating = r),
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             _buildCategoryRatingRow(
               label: 'Punctuality',
               icon: Icons.schedule_rounded,
               rating: _punctualityRating,
               onChanged: (r) => setState(() => _punctualityRating = r),
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             _buildCategoryRatingRow(
               label: 'Knowledge',
               icon: Icons.school_rounded,
@@ -204,14 +208,14 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
               onChanged: (r) => setState(() => _knowledgeRating = r),
             ),
 
-            SizedBox(height: AppTheme.spacingXXL),
+            const SizedBox(height: AppTheme.spacingXXL),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitReview,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+                  padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -230,7 +234,7 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
               ),
             ),
 
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
           ],
         ),
       ),
@@ -267,7 +271,7 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
     required Function(int) onChanged,
   }) {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(16),
@@ -275,7 +279,7 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
       child: Row(
         children: [
           Icon(icon, color: AppTheme.primaryColor, size: 20),
-          SizedBox(width: AppTheme.spacingSM),
+          const SizedBox(width: AppTheme.spacingSM),
           Expanded(
             child: Text(
               label,
@@ -288,3 +292,4 @@ class _CreateReviewScreenState extends State<CreateReviewScreen> {
     );
   }
 }
+

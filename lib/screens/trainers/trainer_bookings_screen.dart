@@ -118,14 +118,14 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.pop(context),
           ),
-          SizedBox(width: AppTheme.spacingSM),
+          const SizedBox(width: AppTheme.spacingSM),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -148,7 +148,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
 
   Widget _buildTabBar() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
@@ -172,10 +172,10 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.pending_actions_rounded, size: 20),
-                SizedBox(width: AppTheme.spacingXS),
+                const SizedBox(width: AppTheme.spacingXS),
                 const Text('Pending'),
                 if (_pendingBookings.isNotEmpty) ...[
-                  SizedBox(width: AppTheme.spacingXS),
+                  const SizedBox(width: AppTheme.spacingXS),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -195,13 +195,13 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
           ),
-          Tab(
+          const Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.check_circle_rounded, size: 20),
+                Icon(Icons.check_circle_rounded, size: 20),
                 SizedBox(width: AppTheme.spacingXS),
-                const Text('Confirmed'),
+                Text('Confirmed'),
               ],
             ),
           ),
@@ -222,7 +222,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
     return RefreshIndicator(
       onRefresh: _loadBookings,
       child: ListView.builder(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         itemCount: _pendingBookings.length,
         itemBuilder: (context, index) {
           final booking = _pendingBookings[index];
@@ -244,7 +244,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
     return RefreshIndicator(
       onRefresh: _loadBookings,
       child: ListView.builder(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         itemCount: _confirmedBookings.length,
         itemBuilder: (context, index) {
           final booking = _confirmedBookings[index];
@@ -267,13 +267,13 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
         ).then((_) => _loadBookings()); // Refresh on return
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: AppTheme.spacingMD),
-        padding: EdgeInsets.all(AppTheme.spacingMD),
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingMD),
+        padding: const EdgeInsets.all(AppTheme.spacingMD),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.warningColor.withOpacity(0.3),
+            color: AppTheme.warningColor.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -302,7 +302,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
                   ),
                 ),
 
-                SizedBox(width: AppTheme.spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
 
                 // Client name
                 Expanded(
@@ -329,7 +329,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withOpacity(0.2),
+                    color: AppTheme.warningColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppTheme.warningColor),
                   ),
@@ -344,15 +344,15 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Divider
             Divider(
-              color: AppTheme.textSecondary.withOpacity(0.2),
+              color: AppTheme.textSecondary.withValues(alpha: 0.2),
               height: 1,
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Session Details
             Row(
@@ -372,7 +372,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
 
             Row(
               children: [
@@ -391,7 +391,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Price & Actions
             Row(
@@ -421,7 +421,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
                   ),
                   child: const Text('Decline'),
                 ),
-                SizedBox(width: AppTheme.spacingSM),
+                const SizedBox(width: AppTheme.spacingSM),
                 ElevatedButton(
                   onPressed: () => _confirmBooking(booking),
                   style: ElevatedButton.styleFrom(
@@ -451,13 +451,13 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
         );
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: AppTheme.spacingMD),
-        padding: EdgeInsets.all(AppTheme.spacingMD),
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingMD),
+        padding: const EdgeInsets.all(AppTheme.spacingMD),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.successColor.withOpacity(0.3),
+            color: AppTheme.successColor.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -484,7 +484,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
                     ),
                   ),
                 ),
-                SizedBox(width: AppTheme.spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
                 Expanded(
                   child: Text(
                     booking.clientName ?? 'Unknown',
@@ -493,7 +493,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
                         ),
                   ),
                 ),
-                Icon(
+                const Icon(
                   Icons.check_circle_rounded,
                   color: AppTheme.successColor,
                   size: 20,
@@ -501,7 +501,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Session info
             Row(
@@ -521,7 +521,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
 
             Row(
               children: [
@@ -553,7 +553,7 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
     return Row(
       children: [
         Icon(icon, size: 16, color: AppTheme.textSecondary),
-        SizedBox(width: AppTheme.spacingXS),
+        const SizedBox(width: AppTheme.spacingXS),
         Expanded(
           child: Text(
             label,
@@ -578,16 +578,16 @@ class _TrainerBookingsScreenState extends State<TrainerBookingsScreen>
           Icon(
             icon,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             title,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium,
@@ -692,14 +692,14 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Decline Booking?'),
+      title: const Text('Decline Booking?'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Let ${widget.clientName} know why you can\'t make it:'),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             ...List.generate(_predefinedReasons.length, (index) {
               final reason = _predefinedReasons[index];
               return RadioListTile<String>(
@@ -712,7 +712,7 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
               );
             }),
             if (_selectedReason == 'Other') ...[
-              SizedBox(height: AppTheme.spacingSM),
+              const SizedBox(height: AppTheme.spacingSM),
               TextField(
                 controller: _customReasonController,
                 decoration: const InputDecoration(

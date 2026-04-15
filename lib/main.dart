@@ -4,14 +4,16 @@ import 'package:provider/provider.dart';
 import 'config/supabase_config.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/auth/auth_callback_screen.dart';
 import 'screens/home/home_screen_modern.dart';
 import 'screens/trainers/trainer_onboarding_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 import 'services/trainer_service.dart';
 import 'services/booking_service.dart';
 import 'services/messaging_service.dart';
 import 'services/profile_service.dart';
 import 'services/support_service.dart';
+import 'services/goals_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,12 +40,22 @@ class MyApp extends StatelessWidget {
         Provider<MessagingService>(create: (_) => MessagingService()),
         Provider<ProfileService>(create: (_) => ProfileService()),
         Provider<SupportService>(create: (_) => SupportService()),
+        Provider<GoalsService>(create: (_) => GoalsService()),
       ],
       child: MaterialApp(
         title: 'Spotter',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const AuthWrapper(),
+        onGenerateRoute: (settings) {
+          // Handle the /auth-callback route from email confirmation links
+          if (settings.name == '/auth-callback') {
+            return MaterialPageRoute(
+              builder: (_) => const AuthCallbackScreen(),
+            );
+          }
+          return null;
+        },
       ),
     );
   }
@@ -67,7 +79,7 @@ class AuthWrapper extends StatelessWidget {
               child: child,
             );
           },
-          child: Icon(
+          child: const Icon(
             Icons.fitness_center_rounded,
             size: 60,
             color: AppTheme.primaryColor,
@@ -87,7 +99,7 @@ class AuthWrapper extends StatelessWidget {
             );
           },
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
 
         // Loading indicator with gradient
         SizedBox(
@@ -95,11 +107,11 @@ class AuthWrapper extends StatelessWidget {
           height: 60,
           child: CircularProgressIndicator(
             strokeWidth: 4,
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         // Animated dots
         SizedBox(
@@ -149,11 +161,16 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (authProvider.user != null) {
-          // Check if this is a trainer who needs to complete their profile
-          return _TrainerProfileGate(userId: authProvider.user!.id);
+          if (!authProvider.user!.isOnboarded) {
+             return authProvider.user!.role == 'trainer' 
+                 ? _TrainerProfileGate(userId: authProvider.user!.id)
+                 : const OnboardingScreen();
+          }
+          return const HomeScreen();
         }
 
-        return const LoginScreen();
+        // Deferred Authentication: Unauthenticated users land on HomeScreen to explore
+        return const HomeScreen();
       },
     );
   }
@@ -221,9 +238,9 @@ class _TrainerProfileGateState extends State<_TrainerProfileGate> {
     }
 
     if (_needsTrainerSetup) {
-      return WillPopScope(
+      return PopScope(
         // Prevent going back past onboarding
-        onWillPop: () async => false,
+        canPop: false,
         child: TrainerOnboardingScreen(
           isEditing: false,
           // After completing onboarding, go to home

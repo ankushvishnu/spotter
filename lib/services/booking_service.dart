@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../models/trainer_availability.dart';
+import '../models/blocked_slot.dart';
 import '../utils/app_exception.dart';
 
 class BookingService {
@@ -22,7 +23,7 @@ class BookingService {
     try {
       final totalPrice = basePrice + platformFee;
 
-      // 1. Check credits from user_credits table
+      // 1. Check credits from user_credits table (1 credit = 1 session)
       debugPrint('💳 [Booking] Checking credits for user: $clientId');
       final creditData = await _supabase
           .from('user_credits')
@@ -36,10 +37,10 @@ class BookingService {
 
       final availableCredits = (creditData['available_credits'] as num?)?.toInt() ?? 0;
       final currentUsed = (creditData['used_credits'] as num?)?.toInt() ?? 0;
-      debugPrint('💳 [Booking] Available credits: $availableCredits, Required: $totalPrice');
+      debugPrint('💳 [Booking] Available credits: $availableCredits (1 credit = 1 session)');
 
-      if (availableCredits < totalPrice) {
-        throw AppException('Insufficient credits. You have $availableCredits credits but need $totalPrice.');
+      if (availableCredits < 1) {
+        throw AppException('Insufficient credits. You have $availableCredits credits. You need at least 1 credit to book a session.');
       }
 
       // 2. Create booking
@@ -62,20 +63,20 @@ class BookingService {
       }).select().single();
       debugPrint('✅ [Booking] Booking created: ${response['id']}');
 
-      // 3. Deduct credits by incrementing used_credits in user_credits table
-      debugPrint('💳 [Booking] Deducting $totalPrice credits...');
+      // 3. Deduct 1 credit for this session
+      debugPrint('💳 [Booking] Deducting 1 credit...');
       await _supabase.from('user_credits').update({
-        'used_credits': currentUsed + totalPrice,
+        'used_credits': currentUsed + 1,
         'last_usage_at': DateTime.now().toIso8601String(),
       }).eq('user_id', clientId);
-      debugPrint('✅ [Booking] Credits deducted. Remaining: ${availableCredits - totalPrice}');
+      debugPrint('✅ [Booking] Credit deducted. Remaining: ${availableCredits - 1}');
 
       // 4. Log credit transaction for audit trail
       await _supabase.from('credit_transactions').insert({
         'user_id': clientId,
         'transaction_type': 'usage',
-        'credits': totalPrice,
-        'description': 'Booking session',
+        'credits': 1,
+        'description': 'Booked session worth ₹$totalPrice',
         'booking_id': response['id'],
       });
       debugPrint('✅ [Booking] Credit transaction logged.');
@@ -85,6 +86,109 @@ class BookingService {
       debugPrint('❌ [Booking] Error: $e');
       if (e is AppException) rethrow;
       throw AppException.fromError(e, fallbackMessage: 'Failed to create booking: $e');
+    }
+  }
+
+  // Create Bulk Booking (Multiple sessions)
+  Future<List<Map<String, dynamic>>> createBulkBooking({
+    required String clientId,
+    required String trainerId,
+    required List<Map<String, dynamic>> sessions, // [{date, time, duration, ...}]
+    required int basePricePerSession,
+    required int platformFeePerSession,
+  }) async {
+    try {
+      final totalSessions = sessions.length;
+
+      // 1. Check credits
+      final creditData = await _supabase
+          .from('user_credits')
+          .select('available_credits, used_credits')
+          .eq('user_id', clientId)
+          .maybeSingle();
+
+      if (creditData == null || (creditData['available_credits'] as int) < totalSessions) {
+        throw AppException('Insufficient credits for $totalSessions sessions.');
+      }
+
+      // 2. Insert bookings in a loop (better to use a single insert for performance and atomicity)
+      final List<Map<String, dynamic>> bookingsToInsert = sessions.map((s) {
+        return {
+          'client_id': clientId,
+          'trainer_id': trainerId,
+          'session_date': s['date'],
+          'session_time': s['time'],
+          'duration_minutes': s['duration'],
+          'location_type': s['location_type'],
+          'location_address': s['location_address'],
+          'base_price': basePricePerSession,
+          'platform_fee': platformFeePerSession,
+          'total_price': basePricePerSession + platformFeePerSession,
+          'status': 'pending',
+          // We'll set the parent_booking_id after the first one or just link them all
+        };
+      }).toList();
+
+      final response = await _supabase.from('bookings').insert(bookingsToInsert).select();
+      
+      // 3. Update credits
+      await _supabase.from('user_credits').update({
+        'used_credits': (creditData['used_credits'] as int) + totalSessions,
+        'last_usage_at': DateTime.now().toIso8601String(),
+      }).eq('user_id', clientId);
+
+      // 4. Log transactions
+      final List<Map<String, dynamic>> logs = (response as List).map((b) => {
+        'user_id': clientId,
+        'transaction_type': 'usage',
+        'credits': 1,
+        'description': 'Bulk booking session',
+        'booking_id': b['id'],
+      }).toList();
+      
+      await _supabase.from('credit_transactions').insert(logs);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to create bulk booking.');
+    }
+  }
+
+  /// Fetch trainer's availability config (unavailable dates, pricing, schedule, specialties).
+  /// Called on-demand when booking modal opens — NOT on every swipe card.
+  Future<TrainerAvailability> getTrainerAvailability(String trainerId) async {
+    try {
+      final response = await _supabase
+          .from('trainers')
+          .select('unavailable_dates, package_options, session_durations, weekly_schedule, specialties')
+          .eq('id', trainerId)
+          .single();
+
+      return TrainerAvailability.fromJson(response);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to fetch trainer availability.');
+    }
+  }
+
+  /// Get blocked time windows for a trainer on a specific date.
+  /// Returns BlockedSlot list computed from existing pending/confirmed bookings.
+  Future<List<BlockedSlot>> getBlockedTimesForDate(String trainerId, DateTime date) async {
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+
+      final existingBookings = await _supabase
+          .from('bookings')
+          .select('session_time, duration_minutes')
+          .eq('trainer_id', trainerId)
+          .eq('session_date', dateStr)
+          .inFilter('status', ['pending', 'confirmed']);
+
+      return (existingBookings as List)
+          .map((b) => BlockedSlot.fromBooking(b))
+          .toList();
+    } catch (e) {
+      debugPrint('BookingService: getBlockedTimesForDate error: $e');
+      return []; // Return empty on error — show all slots as available
     }
   }
 
@@ -286,6 +390,58 @@ class BookingService {
       return response;
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to load trainer info.');
+    }
+  }
+
+  // Get weekly progress stats for home screen
+  Future<Map<String, dynamic>> getWeeklyProgressStats(String userId) async {
+    try {
+      final now = DateTime.now();
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final mondayStr = DateTime(monday.year, monday.month, monday.day)
+          .toIso8601String().split('T')[0];
+      final sundayStr = DateTime(monday.year, monday.month, monday.day + 6)
+          .toIso8601String().split('T')[0];
+
+      final response = await _supabase
+          .from('bookings')
+          .select('session_date, duration_minutes, status')
+          .eq('client_id', userId)
+          .eq('status', 'completed')
+          .gte('session_date', mondayStr)
+          .lte('session_date', sundayStr);
+
+      final bookings = List<Map<String, dynamic>>.from(response);
+
+      // Total hours
+      final totalMinutes = bookings.fold<int>(
+        0, (sum, b) => sum + (b['duration_minutes'] as int? ?? 0),
+      );
+      final totalHours = totalMinutes / 60.0;
+
+      // Sessions count
+      final sessionsCount = bookings.length;
+
+      // Daily breakdown (Mon=0, Sun=6)
+      final dailyMinutes = List<int>.filled(7, 0);
+      for (final b in bookings) {
+        final date = DateTime.parse(b['session_date'] as String);
+        final dayIndex = date.weekday - 1; // Monday = 0
+        dailyMinutes[dayIndex] += (b['duration_minutes'] as int? ?? 0);
+      }
+
+      return {
+        'totalHours': totalHours,
+        'sessionsCount': sessionsCount,
+        'dailyMinutes': dailyMinutes,
+      };
+    } catch (e) {
+      debugPrint('BookingService: getWeeklyProgressStats error: $e');
+      return {
+        'totalHours': 0.0,
+        'sessionsCount': 0,
+        'dailyMinutes': List<int>.filled(7, 0),
+      };
     }
   }
 }

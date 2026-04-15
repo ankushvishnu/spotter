@@ -1,5 +1,5 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../utils/app_exception.dart';
 
 class SupportService {
   final _supabase = SupabaseConfig.client;
@@ -17,7 +17,9 @@ class SupportService {
         'status': 'open',
       });
     } catch (e) {
-      throw Exception('Failed to submit support request: $e');
+      throw AppException.fromError(e,
+          fallbackMessage:
+              'Could not submit your request. Please try again.');
     }
   }
 }

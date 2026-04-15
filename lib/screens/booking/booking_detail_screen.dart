@@ -5,7 +5,11 @@ import '../../services/booking_service.dart';
 import '../../services/review_service.dart';
 import '../../models/booking_model.dart';
 import '../../config/theme.dart';
+import '../../utils/app_exception.dart';
 import '../reviews/create_review_screen.dart';
+import '../../services/transfer_session_service.dart';
+import '../home/home_screen_modern.dart';
+import '../../config/supabase_config.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
@@ -36,6 +40,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     setState(() => _isLoading = true);
     try {
       final booking = await _bookingService.getBooking(widget.bookingId);
+      if (!mounted) return;
       if (booking != null) {
         final model = BookingModel.fromJson(booking);
         // Check if already reviewed (only for completed bookings)
@@ -59,7 +64,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading booking: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -88,14 +96,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           Icon(
             Icons.error_outline_rounded,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             'Booking Not Found',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Go Back'),
@@ -107,35 +115,35 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildContent() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Status Card
           _buildStatusCard(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Trainer Info
           _buildTrainerInfo(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Session Details
           _buildSessionDetails(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Payment Details
           _buildPaymentDetails(),
 
           if (_booking!.isPending || _booking!.isConfirmed) ...[
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
             _buildActions(),
           ],
-          // Rate Session button for completed and unreviewed bookings
-          if (_booking!.isCompleted && !_hasReview) ...[
-            SizedBox(height: AppTheme.spacingLG),
+          // Rate Session button for completed (or past confirmed) and unreviewed bookings
+          if ((_booking!.isCompleted || (_booking!.isConfirmed && _booking!.sessionDate.isBefore(DateTime.now()))) && !_hasReview) ...[
+            const SizedBox(height: AppTheme.spacingLG),
             _buildRateSessionButton(),
           ],
         ],
@@ -146,22 +154,22 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget _buildStatusCard() {
     final statusColor = _getStatusColor(_booking!.status);
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [statusColor.withOpacity(0.2), statusColor.withOpacity(0.1)],
+          colors: [statusColor.withValues(alpha: 0.2), statusColor.withValues(alpha: 0.1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 2),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
+              color: statusColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -170,7 +178,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               size: 32,
             ),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,11 +190,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                         fontWeight: FontWeight.w900,
                       ),
                 ),
-                SizedBox(height: AppTheme.spacingXS),
+                const SizedBox(height: AppTheme.spacingXS),
                 Text(
                   _getStatusDescription(_booking!.status),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: statusColor.withOpacity(0.8),
+                        color: statusColor.withValues(alpha: 0.8),
                       ),
                 ),
               ],
@@ -199,7 +207,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildTrainerInfo() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -223,7 +231,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ),
             ),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +266,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildSessionDetails() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -270,32 +278,32 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             'Session Details',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.calendar_today_rounded,
             label: 'Date',
             value: _booking!.formattedDate,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.access_time_rounded,
             label: 'Time',
             value: _booking!.formattedTime,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.timer_rounded,
             label: 'Duration',
             value: '${_booking!.durationMinutes} minutes',
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.location_on_rounded,
             label: 'Location',
             value: _booking!.locationDisplay,
           ),
           if (_booking!.locationAddress != null) ...[
-            SizedBox(height: AppTheme.spacingXS),
+            const SizedBox(height: AppTheme.spacingXS),
             Padding(
               padding: const EdgeInsets.only(left: 36),
               child: Text(
@@ -313,7 +321,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildPaymentDetails() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -325,13 +333,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             'Payment Details',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildPriceRow('Session Fee', _booking!.basePrice),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           _buildPriceRow('Platform Fee', _booking!.platformFee),
           Divider(
             height: AppTheme.spacingLG,
-            color: AppTheme.textSecondary.withOpacity(0.3),
+            color: AppTheme.textSecondary.withValues(alpha: 0.3),
           ),
           _buildPriceRow('Total', _booking!.totalPrice, isTotal: true),
         ],
@@ -347,7 +355,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return Row(
       children: [
         Icon(icon, size: 20, color: AppTheme.primaryColor),
-        SizedBox(width: AppTheme.spacingMD),
+        const SizedBox(width: AppTheme.spacingMD),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,7 +405,30 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget _buildActions() {
     return Column(
       children: [
-        if (_booking!.isPending)
+        if (_booking!.isPending || _booking!.isConfirmed) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _showRescheduleDialog(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentColor,
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+              ),
+              child: const Text('Reschedule Booking'),
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSM),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _showTransferDialog(),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+              ),
+              child: const Text('Transfer Session to Another Trainer'),
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSM),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -405,11 +436,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.errorColor,
                 side: const BorderSide(color: AppTheme.errorColor),
-                padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
               ),
               child: const Text('Cancel Booking'),
             ),
           ),
+        ],
       ],
     );
   }
@@ -437,7 +469,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         icon: const Icon(Icons.star_rounded, size: 20),
         label: const Text('Rate This Session'),
         style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+          padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
         ),
       ),
     );
@@ -538,8 +570,99 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
+      }
+    }
+  }
+
+  Future<void> _showRescheduleDialog() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _booking!.sessionDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+    );
+    if (date == null) return;
+
+    if (!mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: int.parse(_booking!.sessionTime.split(':')[0]),
+        minute: int.parse(_booking!.sessionTime.split(':')[1]),
+      ),
+    );
+    if (time == null) return;
+
+    if (!mounted) return;
+    try {
+      await SupabaseConfig.client.from('bookings').update({
+        'session_date': date.toIso8601String().split('T')[0],
+        'session_time': '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00',
+        'status': 'pending', 
+      }).eq('id', _booking!.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rescheduled successfully')));
+        _loadBooking();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to reschedule: $e')));
+      }
+    }
+  }
+
+  Future<void> _showTransferDialog() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transfer Session'),
+        content: const Text(
+          'This will cancel your current booking and take you to the Explore page to find a new trainer. Proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor),
+            child: const Text('Transfer'),
+          ),
+        ],
+      ),
+    );
+
+
+    if (confirm == true) {
+      if (userId == null) return;
+
+      try {
+        await TransferSessionService().transferSession(bookingId: _booking!.id, clientId: userId);
+        if (!mounted) return;
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+               content: Text('Session transferred.'),
+               backgroundColor: AppTheme.successColor,
+            ),
+           );
+           Navigator.of(context).pushAndRemoveUntil(
+             MaterialPageRoute(builder: (_) => const HomeScreen(initialIndex: 2)), 
+             (route) => false
+           );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to transfer: $e')));
+        }
       }
     }
   }

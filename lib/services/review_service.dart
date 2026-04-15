@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/review_model.dart';
+import '../utils/app_exception.dart';
 
 class ReviewService {
   final _supabase = SupabaseConfig.client;
@@ -27,6 +27,26 @@ class ReviewService {
     }
   }
 
+  /// Batch check: which booking IDs have been reviewed by this user
+  /// Returns Set of booking IDs that already have reviews
+  Future<Set<String>> getReviewedBookingIds(
+      List<String> bookingIds, String reviewerId) async {
+    if (bookingIds.isEmpty) return {};
+    try {
+      final response = await _supabase
+          .from('reviews')
+          .select('booking_id')
+          .inFilter('booking_id', bookingIds)
+          .eq('reviewer_id', reviewerId);
+      return (response as List)
+          .map((r) => r['booking_id'] as String)
+          .toSet();
+    } catch (e) {
+      debugPrint('ReviewService: getReviewedBookingIds error: $e');
+      return {};
+    }
+  }
+
   /// Check if user has already reviewed a booking
   Future<bool> hasReviewedBooking(String bookingId, String reviewerId) async {
     try {
@@ -44,6 +64,7 @@ class ReviewService {
   }
 
   /// Submit a review for a trainer session
+  /// Handles duplicate reviews by checking first (prevents 23505 error)
   Future<void> submitReview({
     required String reviewerId,
     required String trainerId,
@@ -54,17 +75,44 @@ class ReviewService {
     int? punctualityRating,
     int? knowledgeRating,
   }) async {
-    await _supabase.from('reviews').insert({
-      'reviewer_id': reviewerId,
-      'trainer_id': trainerId,
-      'booking_id': bookingId,
-      'rating': rating,
-      'review_text': reviewText?.isEmpty == true ? null : reviewText,
-      'professionalism_rating': professionalismRating,
-      'punctuality_rating': punctualityRating,
-      'knowledge_rating': knowledgeRating,
-      'is_verified': true,
-    });
+    // Check if already reviewed to prevent unique constraint violation (23505)
+    final alreadyReviewed = await hasReviewedBooking(bookingId, reviewerId);
+    if (alreadyReviewed) {
+      throw AppException('You have already reviewed this session.');
+    }
+
+    try {
+      await _supabase.from('reviews').insert({
+        'reviewer_id': reviewerId,
+        'trainer_id': trainerId,
+        'booking_id': bookingId,
+        'rating': rating,
+        'review_text': reviewText?.isEmpty == true ? null : reviewText,
+        'professionalism_rating': professionalismRating,
+        'punctuality_rating': punctualityRating,
+        'knowledge_rating': knowledgeRating,
+        'is_verified': true,
+      });
+    } catch (e) {
+      if (e is AppException) rethrow;
+      // Maps 42501 → "Session pending from Trainer", 23505 → duplicate, etc.
+      throw AppException.fromError(e,
+          fallbackMessage: 'Could not submit your review. Please try again.');
+    }
+  }
+
+  /// Get count of reviews submitted by a user
+  Future<int> getUserReviewsCount(String userId) async {
+    try {
+      final response = await _supabase
+          .from('reviews')
+          .select('id')
+          .eq('reviewer_id', userId);
+      return (response as List).length;
+    } catch (e) {
+      debugPrint('ReviewService: getUserReviewsCount error: $e');
+      return 0;
+    }
   }
 
   /// Get average rating stats for a trainer

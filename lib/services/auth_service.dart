@@ -26,6 +26,7 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: SupabaseConfig.authCallbackUrl,
         data: {
           'full_name': fullName,
           'role': role,

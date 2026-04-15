@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
+import '../../services/review_service.dart';
+import '../../config/supabase_config.dart';
 import '../../models/booking_model.dart';
 import '../../config/theme.dart';
 import '../../utils/booking_status_utils.dart';
 import 'booking_detail_screen.dart';
+import '../reviews/create_review_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -17,11 +21,15 @@ class MyBookingsScreen extends StatefulWidget {
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late final BookingService _bookingService;
+  final ReviewService _reviewService = ReviewService();
   late TabController _tabController;
+  RealtimeChannel? _subscription;
 
   List<BookingModel> _upcomingBookings = [];
   List<BookingModel> _pastBookings = [];
+  final Set<String> _reviewedBookingIds = {};
   bool _isLoading = true;
+  String? _lastUserId;
 
   @override
   void initState() {
@@ -29,10 +37,45 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     _bookingService = context.read<BookingService>();
     _tabController = TabController(length: 2, vsync: this);
     _loadBookings();
+    _setupRealtime();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentUserId = context.watch<AuthProvider>().user?.id;
+    if (currentUserId != null && currentUserId != _lastUserId) {
+      _lastUserId = currentUserId;
+      _loadBookings();
+      _setupRealtime();
+    }
+  }
+
+  void _setupRealtime() {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+
+    _subscription = SupabaseConfig.client
+        .channel('public:bookings:client_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bookings',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'client_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            if (mounted) _loadBookings();
+          },
+        )
+        .subscribe();
   }
 
   @override
   void dispose() {
+    _subscription?.unsubscribe();
     _tabController.dispose();
     super.dispose();
   }
@@ -43,12 +86,29 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
     setState(() => _isLoading = true);
     try {
-      final upcoming = await _bookingService.getUpcomingBookings(userId);
-      final past = await _bookingService.getPastBookings(userId);
+      // Parallel fetch: upcoming + past bookings at the same time
+      final results = await Future.wait([
+        _bookingService.getUpcomingBookings(userId),
+        _bookingService.getPastBookings(userId),
+      ]);
+
+      final upcoming = results[0];
+      final past = results[1];
+      final pastModels = past.map((b) => BookingModel.fromJson(b)).toList();
+
+      // Batch review check: single query instead of N+1
+      final completedIds = pastModels
+          .where((b) => b.status == 'completed')
+          .map((b) => b.id)
+          .toList();
+      final reviewed = await _reviewService.getReviewedBookingIds(completedIds, userId);
 
       setState(() {
         _upcomingBookings = upcoming.map((b) => BookingModel.fromJson(b)).toList();
-        _pastBookings = past.map((b) => BookingModel.fromJson(b)).toList();
+        _pastBookings = pastModels;
+        _reviewedBookingIds
+          ..clear()
+          ..addAll(reviewed);
         _isLoading = false;
       });
     } catch (e) {
@@ -88,14 +148,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
-          ),
-          SizedBox(width: AppTheme.spacingSM),
           Text(
             'My Bookings',
             style: Theme.of(context).textTheme.headlineLarge,
@@ -107,7 +162,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildTabBar() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
@@ -125,14 +180,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
-        tabs: [
+        tabs: const [
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.upcoming_rounded, size: 20),
+                Icon(Icons.upcoming_rounded, size: 20),
                 SizedBox(width: AppTheme.spacingXS),
-                const Text('Upcoming'),
+                Text('Upcoming'),
               ],
             ),
           ),
@@ -140,9 +195,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.history_rounded, size: 20),
+                Icon(Icons.history_rounded, size: 20),
                 SizedBox(width: AppTheme.spacingXS),
-                const Text('Past'),
+                Text('Past'),
               ],
             ),
           ),
@@ -163,7 +218,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return RefreshIndicator(
       onRefresh: _loadBookings,
       child: ListView.builder(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         itemCount: _upcomingBookings.length,
         itemBuilder: (context, index) {
           final booking = _upcomingBookings[index];
@@ -185,7 +240,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return RefreshIndicator(
       onRefresh: _loadBookings,
       child: ListView.builder(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         itemCount: _pastBookings.length,
         itemBuilder: (context, index) {
           final booking = _pastBookings[index];
@@ -206,13 +261,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ).then((_) => _loadBookings()); // Refresh on return
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: AppTheme.spacingMD),
-        padding: EdgeInsets.all(AppTheme.spacingMD),
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingMD),
+        padding: const EdgeInsets.all(AppTheme.spacingMD),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: BookingStatusUtils.getStatusColor(booking.status).withOpacity(0.3),
+            color: BookingStatusUtils.getStatusColor(booking.status).withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -241,7 +296,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   ),
                 ),
 
-                SizedBox(width: AppTheme.spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
 
                 // Trainer name & specialties
                 Expanded(
@@ -273,15 +328,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Divider
             Divider(
-              color: AppTheme.textSecondary.withOpacity(0.2),
+              color: AppTheme.textSecondary.withValues(alpha: 0.2),
               height: 1,
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Session Details
             Row(
@@ -301,7 +356,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
 
             Row(
               children: [
@@ -320,7 +375,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
 
             // Price & Actions
             Row(
@@ -338,7 +393,51 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     onPressed: () => _showCancelDialog(booking),
                     child: const Text('Cancel'),
                   ),
-                Icon(
+                // Rate Session button for completed past bookings
+                if (!isUpcoming && booking.status == 'completed')
+                  _reviewedBookingIds.contains(booking.id)
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warningColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star_rounded, size: 14, color: AppTheme.warningColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Rated',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.warningColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () async {
+                            final submitted = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CreateReviewScreen(
+                                  bookingId: booking.id,
+                                  trainerId: booking.trainerId ?? '',
+                                  trainerName: booking.trainerName ?? 'Trainer',
+                                ),
+                              ),
+                            );
+                            if (submitted == true) _loadBookings();
+                          },
+                          icon: const Icon(Icons.star_outline_rounded, size: 18),
+                          label: const Text('Rate'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.warningColor,
+                          ),
+                        ),
+                const Icon(
                   Icons.chevron_right_rounded,
                   color: AppTheme.textSecondary,
                 ),
@@ -354,7 +453,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Row(
       children: [
         Icon(icon, size: 16, color: AppTheme.textSecondary),
-        SizedBox(width: AppTheme.spacingXS),
+        const SizedBox(width: AppTheme.spacingXS),
         Expanded(
           child: Text(
             label,
@@ -374,9 +473,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -407,16 +506,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           Icon(
             icon,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             title,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium,

@@ -7,6 +7,7 @@ import '../../models/trainer_model.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
 import '../../widgets/trainer_card.dart';
+import '../../utils/app_exception.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -61,7 +62,7 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(AppException.cleanMessage(e)),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -160,7 +161,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search by name or specialty...',
                   hintStyle: TextStyle(
-                    color: AppTheme.textSecondary.withOpacity(0.5),
+                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
                   ),
                   prefixIcon: const Icon(
                     Icons.search,
@@ -257,7 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
               _buildSpecialtyChip('All', null),
               ...AppConstants.specialties.map((specialty) {
                 return _buildSpecialtyChip(specialty, specialty);
-              }).toList(),
+              }),
             ],
           ),
           
@@ -276,7 +277,7 @@ class _SearchScreenState extends State<SearchScreen> {
             max: AppConstants.maxPrice.toDouble(),
             divisions: 40,
             activeColor: AppTheme.primaryColor,
-            inactiveColor: AppTheme.textSecondary.withOpacity(0.2),
+            inactiveColor: AppTheme.textSecondary.withValues(alpha: 0.2),
             onChanged: (value) {
               setState(() => _maxPrice = value);
               _applyFilters();
@@ -298,7 +299,7 @@ class _SearchScreenState extends State<SearchScreen> {
             max: 5,
             divisions: 10,
             activeColor: AppTheme.warningColor,
-            inactiveColor: AppTheme.textSecondary.withOpacity(0.2),
+            inactiveColor: AppTheme.textSecondary.withValues(alpha: 0.2),
             onChanged: (value) {
               setState(() => _minRating = value);
               _applyFilters();
@@ -326,7 +327,7 @@ class _SearchScreenState extends State<SearchScreen> {
           border: Border.all(
             color: isSelected
                 ? AppTheme.primaryColor
-                : AppTheme.textSecondary.withOpacity(0.3),
+                : AppTheme.textSecondary.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -377,7 +378,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.search_off_rounded,
               size: 64,
-              color: AppTheme.textSecondary.withOpacity(0.5),
+              color: AppTheme.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(

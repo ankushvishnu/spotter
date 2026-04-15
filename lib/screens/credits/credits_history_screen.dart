@@ -54,8 +54,8 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
               children: [
                 // Balance card
                 Container(
-                  margin: EdgeInsets.all(AppTheme.spacingLG),
-                  padding: EdgeInsets.all(AppTheme.spacingLG),
+                  margin: const EdgeInsets.all(AppTheme.spacingLG),
+                  padding: const EdgeInsets.all(AppTheme.spacingLG),
                   decoration: BoxDecoration(
                     gradient: AppTheme.primaryGradient,
                     borderRadius: BorderRadius.circular(24),
@@ -68,7 +68,7 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
                         color: AppTheme.backgroundColor,
                         size: 40,
                       ),
-                      SizedBox(width: AppTheme.spacingMD),
+                      const SizedBox(width: AppTheme.spacingMD),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -76,7 +76,7 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
                             'Available Credits',
                             style:
                                 Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.backgroundColor.withOpacity(0.8),
+                              color: AppTheme.backgroundColor.withValues(alpha: 0.8),
                             ),
                           ),
                           Text(
@@ -99,7 +99,7 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
                       : RefreshIndicator(
                           onRefresh: _loadHistory,
                           child: ListView.builder(
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                                 horizontal: AppTheme.spacingLG),
                             itemCount: _transactions.length,
                             itemBuilder: (context, index) {
@@ -119,8 +119,8 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.receipt_long_rounded,
-              size: 64, color: AppTheme.textSecondary.withOpacity(0.4)),
-          SizedBox(height: AppTheme.spacingMD),
+              size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             'No transactions yet',
             style: Theme.of(context)
@@ -143,8 +143,8 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
         : null;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppTheme.spacingMD),
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      margin: const EdgeInsets.only(bottom: AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(16),
@@ -157,7 +157,7 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
               color: (isPurchase
                       ? AppTheme.successColor
                       : AppTheme.errorColor)
-                  .withOpacity(0.15),
+                  .withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -168,7 +168,7 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
               size: 24,
             ),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,3 +203,4 @@ class _CreditsHistoryScreenState extends State<CreditsHistoryScreen> {
     );
   }
 }
+

@@ -23,12 +23,12 @@ class PaymentConfirmationScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppTheme.spacingLG),
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
           child: Column(
             children: [
               // Amount Card
               Container(
-                padding: EdgeInsets.all(AppTheme.spacingXL),
+                padding: const EdgeInsets.all(AppTheme.spacingXL),
                 decoration: BoxDecoration(
                   gradient: AppTheme.primaryGradient,
                   borderRadius: BorderRadius.circular(24),
@@ -42,7 +42,7 @@ class PaymentConfirmationScreen extends StatelessWidget {
                         color: AppTheme.backgroundColor,
                       ),
                     ),
-                    SizedBox(height: AppTheme.spacingSM),
+                    const SizedBox(height: AppTheme.spacingSM),
                     Text(
                       '₹$totalAmount',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
@@ -50,11 +50,11 @@ class PaymentConfirmationScreen extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: AppTheme.spacingXS),
+                    const SizedBox(height: AppTheme.spacingXS),
                     Text(
                       'Session with $trainerName',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.backgroundColor.withOpacity(0.9),
+                        color: AppTheme.backgroundColor.withValues(alpha: 0.9),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -62,25 +62,25 @@ class PaymentConfirmationScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
 
               // Demo Notice
               Container(
-                padding: EdgeInsets.all(AppTheme.spacingMD),
+                padding: const EdgeInsets.all(AppTheme.spacingMD),
                 decoration: BoxDecoration(
-                  color: AppTheme.warningColor.withOpacity(0.1),
+                  color: AppTheme.warningColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.warningColor.withOpacity(0.3),
+                    color: AppTheme.warningColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       color: AppTheme.warningColor,
                     ),
-                    SizedBox(width: AppTheme.spacingMD),
+                    const SizedBox(width: AppTheme.spacingMD),
                     Expanded(
                       child: Text(
                         'This is a demo payment. No actual transaction will occur.',
@@ -93,7 +93,7 @@ class PaymentConfirmationScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
 
               // Payment Methods (Demo)
               ListView(
@@ -106,14 +106,14 @@ class PaymentConfirmationScreen extends StatelessWidget {
                     title: 'Credit/Debit Card',
                     subtitle: 'Visa, Mastercard, Amex',
                   ),
-                  SizedBox(height: AppTheme.spacingMD),
+                  const SizedBox(height: AppTheme.spacingMD),
                   _buildPaymentOption(
                     context,
                     icon: Icons.account_balance_rounded,
                     title: 'UPI',
                     subtitle: 'Google Pay, PhonePe, Paytm',
                   ),
-                  SizedBox(height: AppTheme.spacingMD),
+                  const SizedBox(height: AppTheme.spacingMD),
                   _buildPaymentOption(
                     context,
                     icon: Icons.account_balance_wallet_rounded,
@@ -123,7 +123,7 @@ class PaymentConfirmationScreen extends StatelessWidget {
                 ],
               ),
 
-              SizedBox(height: AppTheme.spacingLG),
+              const SizedBox(height: AppTheme.spacingLG),
 
               // Pay Button
               SizedBox(
@@ -143,14 +143,14 @@ class PaymentConfirmationScreen extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('PAY NOW'),
+                      Text('PAY NOW'),
                       SizedBox(width: AppTheme.spacingSM),
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                      Icon(Icons.arrow_forward_rounded, size: 20),
                     ],
                   ),
                 ),
@@ -169,12 +169,12 @@ class PaymentConfirmationScreen extends StatelessWidget {
     required String subtitle,
   }) {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -182,12 +182,12 @@ class PaymentConfirmationScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: AppTheme.primaryColor),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +207,7 @@ class PaymentConfirmationScreen extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
             color: AppTheme.textSecondary,
           ),

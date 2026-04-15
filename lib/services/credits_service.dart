@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../utils/app_exception.dart';
 
 class CreditsService {
   final _supabase = SupabaseConfig.client;
@@ -27,12 +27,17 @@ class CreditsService {
     required int amountPaid,
     String description = 'Credit Purchase',
   }) async {
-    await _supabase.rpc('add_user_credits', params: {
-      'p_user_id': userId,
-      'p_credits': credits,
-      'p_description': description,
-      'p_amount_paid': amountPaid,
-    });
+    try {
+      await _supabase.rpc('add_user_credits', params: {
+        'p_user_id': userId,
+        'p_credits': credits,
+        'p_description': description,
+        'p_amount_paid': amountPaid,
+      });
+    } catch (e) {
+      throw AppException.fromError(e,
+          fallbackMessage: 'Could not add credits. Please try again.');
+    }
   }
 
   /// Deduct one credit for a booking (called on booking confirmation)
@@ -40,11 +45,17 @@ class CreditsService {
     required String userId,
     required String bookingId,
   }) async {
-    await _supabase.rpc('use_user_credits', params: {
-      'p_user_id': userId,
-      'p_booking_id': bookingId,
-      'p_credits': 1,
-    });
+    try {
+      await _supabase.rpc('use_user_credits', params: {
+        'p_user_id': userId,
+        'p_booking_id': bookingId,
+        'p_credits': 1,
+      });
+    } catch (e) {
+      throw AppException.fromError(e,
+          fallbackMessage:
+              'Could not use credit for this booking. Please try again.');
+    }
   }
 
   /// Get credit transaction history for a user

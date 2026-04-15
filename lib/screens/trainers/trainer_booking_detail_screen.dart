@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
 import '../../models/booking_model.dart';
 import '../../config/theme.dart';
+import '../../utils/app_exception.dart';
 
 class TrainerBookingDetailScreen extends StatefulWidget {
   final String bookingId;
@@ -53,7 +54,10 @@ class _TrainerBookingDetailScreenState
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading booking: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -82,14 +86,14 @@ class _TrainerBookingDetailScreenState
           Icon(
             Icons.error_outline_rounded,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             'Booking Not Found',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Go Back'),
@@ -101,31 +105,34 @@ class _TrainerBookingDetailScreenState
 
   Widget _buildContent() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Status Card
           _buildStatusCard(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Client Info
           _buildClientInfo(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Session Details
           _buildSessionDetails(),
 
-          SizedBox(height: AppTheme.spacingLG),
+          const SizedBox(height: AppTheme.spacingLG),
 
           // Earnings
           _buildEarningsCard(),
 
           if (_booking!.isPending) ...[
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
             _buildActions(),
+          ] else if (_booking!.status == 'confirmed') ...[
+            const SizedBox(height: AppTheme.spacingLG),
+            _buildConfirmedActions(),
           ],
         ],
       ),
@@ -135,22 +142,22 @@ class _TrainerBookingDetailScreenState
   Widget _buildStatusCard() {
     final statusColor = _getStatusColor(_booking!.status);
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [statusColor.withOpacity(0.2), statusColor.withOpacity(0.1)],
+          colors: [statusColor.withValues(alpha: 0.2), statusColor.withValues(alpha: 0.1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 2),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
+              color: statusColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -159,7 +166,7 @@ class _TrainerBookingDetailScreenState
               size: 32,
             ),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,11 +178,11 @@ class _TrainerBookingDetailScreenState
                         fontWeight: FontWeight.w900,
                       ),
                 ),
-                SizedBox(height: AppTheme.spacingXS),
+                const SizedBox(height: AppTheme.spacingXS),
                 Text(
                   _getStatusDescription(_booking!.status),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: statusColor.withOpacity(0.8),
+                        color: statusColor.withValues(alpha: 0.8),
                       ),
                 ),
               ],
@@ -188,7 +195,7 @@ class _TrainerBookingDetailScreenState
 
   Widget _buildClientInfo() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -212,7 +219,7 @@ class _TrainerBookingDetailScreenState
               ),
             ),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +246,7 @@ class _TrainerBookingDetailScreenState
 
   Widget _buildSessionDetails() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -251,32 +258,32 @@ class _TrainerBookingDetailScreenState
             'Session Details',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.calendar_today_rounded,
             label: 'Date',
             value: _booking!.formattedDate,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.access_time_rounded,
             label: 'Time',
             value: _booking!.formattedTime,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.timer_rounded,
             label: 'Duration',
             value: '${_booking!.durationMinutes} minutes',
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           _buildDetailRow(
             icon: Icons.location_on_rounded,
             label: 'Location',
             value: _booking!.locationDisplay,
           ),
           if (_booking!.locationAddress != null) ...[
-            SizedBox(height: AppTheme.spacingXS),
+            const SizedBox(height: AppTheme.spacingXS),
             Padding(
               padding: const EdgeInsets.only(left: 36),
               child: Text(
@@ -294,18 +301,18 @@ class _TrainerBookingDetailScreenState
 
   Widget _buildEarningsCard() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withOpacity(0.2),
-            AppTheme.accentColor.withOpacity(0.1),
+            AppTheme.primaryColor.withValues(alpha: 0.2),
+            AppTheme.accentColor.withValues(alpha: 0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,7 +321,7 @@ class _TrainerBookingDetailScreenState
             'Your Earnings',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -330,7 +337,7 @@ class _TrainerBookingDetailScreenState
               ),
             ],
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -350,7 +357,7 @@ class _TrainerBookingDetailScreenState
           ),
           Divider(
             height: AppTheme.spacingLG,
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -381,7 +388,7 @@ class _TrainerBookingDetailScreenState
     return Row(
       children: [
         Icon(icon, size: 20, color: AppTheme.primaryColor),
-        SizedBox(width: AppTheme.spacingMD),
+        const SizedBox(width: AppTheme.spacingMD),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,11 +424,11 @@ class _TrainerBookingDetailScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.successColor,
               foregroundColor: AppTheme.backgroundColor,
-              padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
             ),
           ),
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -431,7 +438,7 @@ class _TrainerBookingDetailScreenState
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.errorColor,
               side: const BorderSide(color: AppTheme.errorColor),
-              padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
             ),
           ),
         ),
@@ -500,7 +507,77 @@ class _TrainerBookingDetailScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildConfirmedActions() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _showCompleteSessionDialog(),
+            icon: const Icon(Icons.check_circle),
+            label: const Text('Mark Session Complete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: AppTheme.backgroundColor,
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showCompleteSessionDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Session?'),
+        content: const Text('Are you sure you want to mark this session as complete? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            child: const Text('Complete Session', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      _completeBooking();
+    }
+  }
+
+  Future<void> _completeBooking() async {
+    try {
+      await _bookingService.completeBooking(widget.bookingId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session marked as completed!'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+        _loadBooking(); // Reload to get fresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppException.cleanMessage(e)), backgroundColor: AppTheme.errorColor),
         );
       }
     }
@@ -542,7 +619,10 @@ class _TrainerBookingDetailScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(AppException.cleanMessage(e)),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -587,7 +667,7 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Let ${widget.clientName} know why you can\'t make it:'),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             ...List.generate(_predefinedReasons.length, (index) {
               final reason = _predefinedReasons[index];
               return RadioListTile<String>(
@@ -600,7 +680,7 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
               );
             }),
             if (_selectedReason == 'Other') ...[
-              SizedBox(height: AppTheme.spacingSM),
+              const SizedBox(height: AppTheme.spacingSM),
               TextField(
                 controller: _customReasonController,
                 decoration: const InputDecoration(

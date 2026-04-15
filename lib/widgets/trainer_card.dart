@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/trainer_model.dart';
 import '../config/theme.dart';
 import '../screens/trainers/trainer_detail_screen_modern.dart';
+import '../utils/image_utils.dart';
 
 /// Reusable trainer card widget used on Home and Search screens.
 class TrainerCard extends StatelessWidget {
@@ -57,6 +58,21 @@ class TrainerCard extends StatelessWidget {
     return card;
   }
 
+  Widget _buildInitial(BuildContext context) {
+    return Container(
+      color: AppTheme.surfaceColor,
+      child: Center(
+        child: Text(
+          trainer.fullName[0].toUpperCase(),
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCard(BuildContext context) {
     return GestureDetector(
       onTap: onTap ??
@@ -77,13 +93,13 @@ class TrainerCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               AppTheme.cardColor,
-              AppTheme.cardColor.withOpacity(0.8),
+              AppTheme.cardColor.withValues(alpha: 0.8),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -104,21 +120,15 @@ class TrainerCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 padding: const EdgeInsets.all(3),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Center(
-                    child: Text(
-                      trainer.fullName[0].toUpperCase(),
-                      style:
-                          Theme.of(context).textTheme.displaySmall?.copyWith(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w900,
-                              ),
-                    ),
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: trainer.avatarUrl != null
+                      ? Image.network(
+                          corsProxyUrl(trainer.avatarUrl),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildInitial(context),
+                        )
+                      : _buildInitial(context),
                 ),
               ),
 
@@ -164,7 +174,7 @@ class TrainerCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.warningColor.withOpacity(0.2),
+                            color: AppTheme.warningColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -206,7 +216,7 @@ class TrainerCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.15),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -224,3 +234,4 @@ class TrainerCard extends StatelessWidget {
     );
   }
 }
+

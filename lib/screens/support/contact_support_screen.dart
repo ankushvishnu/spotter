@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/support_service.dart';
 import '../../config/theme.dart';
+import '../../utils/app_exception.dart';
 
 class ContactSupportScreen extends StatefulWidget {
   const ContactSupportScreen({super.key});
@@ -64,7 +65,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(AppException.cleanMessage(e)),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -80,7 +81,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         child: Form(
           key: _formKey,
           child: Column(
@@ -90,7 +91,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                 'How can we help you?',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              SizedBox(height: AppTheme.spacingMD),
+              const SizedBox(height: AppTheme.spacingMD),
               Text(
                 'Please select a category and provide details so our team can assist you better.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -98,7 +99,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                 ),
               ),
               
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
               
               // Category Dropdown
               Text(
@@ -107,9 +108,9 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: AppTheme.spacingSM),
+              const SizedBox(height: AppTheme.spacingSM),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -127,7 +128,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                 },
               ),
               
-              SizedBox(height: AppTheme.spacingLG),
+              const SizedBox(height: AppTheme.spacingLG),
               
               // Description Input
               Text(
@@ -136,7 +137,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: AppTheme.spacingSM),
+              const SizedBox(height: AppTheme.spacingSM),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 6,
@@ -158,7 +159,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
              },
               ),
               
-              SizedBox(height: AppTheme.spacingXXL),
+              const SizedBox(height: AppTheme.spacingXXL),
               
               // Submit Button
               SizedBox(
@@ -166,7 +167,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _submitFeedback,
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),

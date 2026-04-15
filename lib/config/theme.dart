@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Modern Athletic Colors - Nike/Reebok inspired
-  static const Color primaryColor = Color(0xFF00FF87); // Neon green
-  static const Color secondaryColor = Color(0xFFFF3E3E); // Athletic red
-  static const Color accentColor = Color(0xFF00D9FF); // Electric blue
-  static const Color backgroundColor = Color(0xFF000000); // Pure black
-  static const Color surfaceColor = Color(0xFF1A1F3A); // Card background
-  static const Color cardColor = Color(0xFF1E2442);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0B3C1);
-  static const Color successColor = Color(0xFF00FF87);
-  static const Color errorColor = Color(0xFFFF3E3E);
-  static const Color warningColor = Color(0xFFFFB800);
+  // Energetic Dark / Spotter Aesthetic
+  static const Color primaryColor   = Color(0xFFFF5C1A); // Vibrant Orange
+  static const Color accentColor    = Color(0xFFFF8C42); // Soft Orange 
+  static const Color secondaryColor = Color(0xFF8B3DFF); // Violet
+  static const Color backgroundColor = Color(0xFF070709); // Deepest Black
+  static const Color surfaceColor   = Color(0xFF14141E); // Elevated Surface
+  static const Color cardColor      = Color(0xFF1A1A28); // Lighter Surface
+  static const Color textPrimary    = Color(0xFFEEEAF8); // Soft White
+  static const Color textSecondary  = Color(0xFF8888AA); // Muted Violet/Gray
+  static const Color successColor   = Color(0xFF00C853);
+  static const Color errorColor     = Color(0xFFFF3E3E);
+  static const Color warningColor   = Color(0xFFF5C842); // Gold
+
 
   // Spacing Constants
   static const double spacingXS = 4.0;
@@ -30,7 +31,7 @@ class AppTheme {
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primaryColor, accentColor],
+    colors: [primaryColor, accentColor],       // energetic orange
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -49,7 +50,13 @@ class AppTheme {
 
   // Box Shadows
   static BoxShadow primaryGlow = BoxShadow(
-    color: primaryColor.withOpacity(0.3),
+    color: primaryColor.withValues(alpha: 0.35),
+    blurRadius: 20,
+    spreadRadius: 2,
+  );
+
+  static BoxShadow accentGlow = BoxShadow(
+    color: accentColor.withValues(alpha: 0.35),
     blurRadius: 20,
     spreadRadius: 2,
   );
@@ -69,7 +76,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(radius),
       boxShadow: [
         BoxShadow(
-          color: secondaryColor.withOpacity(0.3),
+          color: secondaryColor.withValues(alpha: 0.3),
           blurRadius: 20,
           spreadRadius: 2,
         ),
@@ -161,32 +168,32 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       error: errorColor,
-      background: backgroundColor,
       surface: surfaceColor,
     ),
     
-    // Text Theme - Bold Athletic Style
+    // Text Theme - Bold Athletic Editorial Style
     textTheme: GoogleFonts.montserratTextTheme(ThemeData.dark().textTheme).copyWith(
       displayLarge: GoogleFonts.montserrat(
-        fontSize: 40,
+        fontSize: 44,
         fontWeight: FontWeight.w900,
         color: textPrimary,
-        letterSpacing: -1,
+        letterSpacing: -1.5, // tighter kerning for premium feel
       ),
       displayMedium: GoogleFonts.montserrat(
-        fontSize: 32,
+        fontSize: 34,
         fontWeight: FontWeight.w900,
         color: textPrimary,
-        letterSpacing: -0.5,
+        letterSpacing: -1.0,
       ),
       displaySmall: GoogleFonts.montserrat(
         fontSize: 28,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w800,
         color: textPrimary,
+        letterSpacing: -0.5,
       ),
       headlineLarge: GoogleFonts.montserrat(
         fontSize: 24,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w800,
         color: textPrimary,
       ),
       headlineMedium: GoogleFonts.montserrat(
@@ -202,14 +209,17 @@ class AppTheme {
       bodyLarge: GoogleFonts.inter(
         fontSize: 16,
         color: textPrimary,
+        height: 1.5,
       ),
       bodyMedium: GoogleFonts.inter(
         fontSize: 14,
         color: textSecondary,
+        height: 1.5,
       ),
       bodySmall: GoogleFonts.inter(
         fontSize: 12,
         color: textSecondary,
+        height: 1.4,
       ),
     ),
     
@@ -338,7 +348,7 @@ class AppTheme {
 extension GradientExtension on LinearGradient {
   LinearGradient withOpacity(double opacity) {
     return LinearGradient(
-      colors: colors.map((color) => color.withOpacity(opacity)).toList(),
+      colors: colors.map((color) => color.withValues(alpha: opacity)).toList(),
       begin: begin,
       end: end,
       stops: stops,

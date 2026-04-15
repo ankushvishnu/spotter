@@ -3,6 +3,7 @@ import '../../config/theme.dart';
 import '../credits/buy_credits_screen.dart';
 import '../credits/credits_history_screen.dart';
 import '../ai/ai_agent_screen.dart';
+import '../tiers/tier_selection_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -15,7 +16,7 @@ class SettingsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -40,7 +41,24 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
+
+            _buildSection(
+              context,
+              title: 'Membership',
+              items: [
+                _SettingItem(
+                  icon: Icons.workspace_premium_rounded,
+                  label: 'Membership Tier',
+                  trailing: 'Manage',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TierSelectionScreen()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacingLG),
 
             _buildSection(
               context,
@@ -64,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
 
             _buildSection(
               context,
@@ -80,7 +98,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
 
             _buildSection(
               context,
@@ -93,7 +111,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
 
             _buildSection(
               context,
@@ -111,7 +129,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
 
             _buildSection(
               context,
@@ -136,7 +154,7 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
 
-            SizedBox(height: AppTheme.spacingXXL),
+            const SizedBox(height: AppTheme.spacingXXL),
           ],
         ),
       ),
@@ -152,7 +170,7 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(
+          padding: const EdgeInsets.only(
               left: AppTheme.spacingXS, bottom: AppTheme.spacingSM),
           child: Text(
             title.toUpperCase(),
@@ -178,7 +196,7 @@ class SettingsScreen extends StatelessWidget {
                   if (i < items.length - 1)
                     Divider(
                       height: 1,
-                      color: AppTheme.textSecondary.withOpacity(0.1),
+                      color: AppTheme.textSecondary.withValues(alpha: 0.1),
                       indent: 56,
                     ),
                 ],
@@ -195,7 +213,7 @@ class SettingsScreen extends StatelessWidget {
       onTap: item.onTap,
       borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppTheme.spacingMD,
           vertical: AppTheme.spacingMD,
         ),
@@ -204,12 +222,12 @@ class SettingsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(item.icon, color: AppTheme.primaryColor, size: 20),
             ),
-            SizedBox(width: AppTheme.spacingMD),
+            const SizedBox(width: AppTheme.spacingMD),
             Expanded(
               child: Text(
                 item.label,
@@ -221,7 +239,7 @@ class SettingsScreen extends StatelessWidget {
                 item.trailing!,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            SizedBox(width: AppTheme.spacingXS),
+            const SizedBox(width: AppTheme.spacingXS),
             const Icon(Icons.chevron_right_rounded,
                 color: AppTheme.textSecondary, size: 20),
           ],
@@ -254,3 +272,4 @@ class _SettingItem {
     required this.onTap,
   });
 }
+

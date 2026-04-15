@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -47,17 +48,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         if (!sessionCreated) {
-          // Email confirmation required — tell the user to check their inbox
+          // Email confirmation required — redirect to login with message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                '✉️ Check your email to confirm your account, then log in.',
+                'Account created! Please check your email to verify your account, then log in.',
               ),
-              backgroundColor: AppTheme.warningColor,
-              duration: Duration(seconds: 5),
+              backgroundColor: AppTheme.successColor,
+              duration: Duration(seconds: 6),
             ),
           );
-          Navigator.pop(context); // Back to login screen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
         } else {
           // Auto-confirmed — AuthWrapper handles navigation to home/onboarding
           final msg = _selectedRole == 'trainer'
@@ -103,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         elevation: 0,
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [AppTheme.backgroundColor, AppTheme.surfaceColor],
             begin: Alignment.topCenter,
@@ -350,13 +354,13 @@ class _RoleCard extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? AppTheme.primaryColor
-                : AppTheme.textSecondary.withOpacity(0.2),
+                : AppTheme.textSecondary.withValues(alpha: 0.2),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
@@ -369,8 +373,8 @@ class _RoleCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryColor.withOpacity(0.15)
-                    : AppTheme.backgroundColor.withOpacity(0.6),
+                    ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                    : AppTheme.backgroundColor.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -397,7 +401,7 @@ class _RoleCard extends StatelessWidget {
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: isSelected
-                        ? AppTheme.primaryColor.withOpacity(0.8)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.8)
                         : AppTheme.textSecondary,
                   ),
               textAlign: TextAlign.center,
@@ -405,7 +409,7 @@ class _RoleCard extends StatelessWidget {
             ),
             if (isSelected) ...[
               const SizedBox(height: 8),
-              Icon(
+              const Icon(
                 Icons.check_circle_rounded,
                 size: 18,
                 color: AppTheme.primaryColor,

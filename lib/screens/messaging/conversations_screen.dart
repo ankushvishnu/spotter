@@ -4,7 +4,9 @@ import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
 import '../../models/conversation_model.dart';
 import '../../config/theme.dart';
+import '../../utils/image_utils.dart';
 import 'chat_screen.dart';
+
 
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
@@ -17,11 +19,22 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   final MessagingService _messagingService = MessagingService();
   List<ConversationModel> _conversations = [];
   bool _isLoading = true;
+  String? _lastUserId;
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentUserId = context.watch<AuthProvider>().user?.id;
+    if (currentUserId != null && currentUserId != _lastUserId) {
+      _lastUserId = currentUserId;
+      _loadConversations();
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -69,16 +82,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-          SizedBox(width: AppTheme.spacingSM),
           Text(
             'Messages',
             style: Theme.of(context).textTheme.headlineLarge,
@@ -103,16 +109,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           Icon(
             Icons.chat_bubble_outline_rounded,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             'No Conversations Yet',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: AppTheme.textSecondary,
             ),
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           Text(
             'Start chatting with trainers',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -129,7 +135,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     return RefreshIndicator(
       onRefresh: _loadConversations,
       child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
         itemCount: _conversations.length,
         itemBuilder: (context, index) {
           final conversation = _conversations[index];
@@ -167,13 +173,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         ).then((_) => _loadConversations()); // Refresh on return
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: AppTheme.spacingMD),
-        padding: EdgeInsets.all(AppTheme.spacingMD),
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingMD),
+        padding: const EdgeInsets.all(AppTheme.spacingMD),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -189,24 +195,19 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 boxShadow: [AppTheme.primaryGlow],
               ),
               padding: const EdgeInsets.all(2),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    otherUserName[0].toUpperCase(),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: otherUserAvatar != null && otherUserAvatar.isNotEmpty
+                    ? Image.network(
+                        corsProxyUrl(otherUserAvatar),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildInitial(otherUserName),
+                      )
+                    : _buildInitial(otherUserName),
               ),
             ),
 
-            SizedBox(width: AppTheme.spacingMD),
+            const SizedBox(width: AppTheme.spacingMD),
 
             // Message Info
             Expanded(
@@ -233,7 +234,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: AppTheme.spacingXS),
+                  const SizedBox(height: AppTheme.spacingXS),
                   Text(
                     conversation.lastMessagePreview ?? 'No messages yet',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -246,16 +247,26 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               ),
             ),
 
-            SizedBox(width: AppTheme.spacingMD),
+            const SizedBox(width: AppTheme.spacingMD),
 
-            // Unread indicator (if any)
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppTheme.textSecondary,
-            ),
           ],
         ),
       ),
     );
   }
-}
+
+  Widget _buildInitial(String name) {
+    return Container(
+      color: AppTheme.surfaceColor,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}

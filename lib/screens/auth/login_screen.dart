@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'signup_screen.dart';
 import '../../config/theme.dart';
+import '../home/home_screen_modern.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,6 +36,13 @@ class _LoginScreenState extends State<LoginScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
+          
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -55,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [AppTheme.backgroundColor, AppTheme.surfaceColor],
             begin: Alignment.topCenter,
@@ -64,13 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(AppTheme.spacingLG),
+            padding: const EdgeInsets.all(AppTheme.spacingLG),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: AppTheme.spacingXXL),
+                  const SizedBox(height: AppTheme.spacingXXL),
 
                   // Enhanced Logo/Title with Animation
                   TweenAnimationBuilder<double>(
@@ -95,12 +103,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: AppTheme.spacingXS),
+                        const SizedBox(height: AppTheme.spacingXS),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.fitness_center_rounded, color: AppTheme.primaryColor, size: 20),
-                            SizedBox(width: AppTheme.spacingXS),
+                            const Icon(Icons.fitness_center_rounded, color: AppTheme.primaryColor, size: 20),
+                            const SizedBox(width: AppTheme.spacingXS),
                             Text(
                               'Find Your Perfect Fitness Trainer',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -114,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  SizedBox(height: AppTheme.spacingXXL),
+                  const SizedBox(height: AppTheme.spacingXXL),
                 
                 // Email Field
                 TextFormField(
@@ -177,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : _handleLogin,
                     style: AppTheme.gradientButtonStyle(radius: 16),
                     child: _isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
@@ -186,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   AlwaysStoppedAnimation<Color>(AppTheme.backgroundColor),
                             ),
                           )
-                        : Row(
+                        : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text('Login'),

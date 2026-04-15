@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../config/supabase_config.dart';
@@ -25,6 +26,9 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
   bool _isLoading = false;
   int _currentStep = 0;
 
+  // --- Tier selection removed — trainers set own pricing freely ---
+  // Tier is now managed via the Membership page (users.tier)
+
   // --- Basic Info ---
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
@@ -37,8 +41,10 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
   final _credentialsController = TextEditingController();
   final _membershipsController = TextEditingController();
   final _priceController = TextEditingController();
-  List<String> _certificates = [];
+  final List<String> _certificates = [];
   final _certificateController = TextEditingController();
+  final List<XFile> _certificateFiles = [];
+  final _imagePicker = ImagePicker();
 
   // --- Specialties / Categories ---
   final List<String> _allCategories = [
@@ -50,7 +56,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
     'Taekwondo', 'Muay Thai', 'Jiu-Jitsu', 'Gymnastics',
     'Home Training', 'Dance Trainer', 'Mall Khamb',
   ];
-  List<String> _selectedCategories = [];
+  final List<String> _selectedCategories = [];
 
   // --- Preferences ---
   String? _selectedDemographic; // e.g., teens, adults, seniors
@@ -87,8 +93,35 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
     super.dispose();
   }
 
+  Future<void> _pickCertificateFile() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _certificateFiles.add(pickedFile);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick document: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill out all required fields first'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
 
     final userId = context.read<AuthProvider>().user?.id;
     if (userId == null) return;
@@ -115,13 +148,16 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
           _membershipsController.text.trim(),
       ];
 
-      // 3. Upsert trainer record
-      await _supabase.from('trainers').upsert({
+      // 3. Determine pricing (trainer sets their own price)
+      final int pricePerSession = int.tryParse(_priceController.text) ?? 500;
+
+      // 4. Upsert trainer record
+      final trainerData = await _supabase.from('trainers').upsert({
         'user_id': userId,
         'specialties': _selectedCategories.map((c) => c.toLowerCase()).toList(),
         'years_of_experience': int.tryParse(_experienceController.text),
         'certifications': allCertifications.isEmpty ? null : allCertifications,
-        'price_per_session': int.tryParse(_priceController.text) ?? 0,
+        'price_per_session': pricePerSession,
         'gym_affiliations': _gymNameController.text.trim().isEmpty
             ? null
             : [_gymNameController.text.trim()],
@@ -129,7 +165,29 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             ? null
             : [_locationController.text.trim()],
         'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'user_id');
+      }, onConflict: 'user_id').select('id').single();
+
+      final trainerId = trainerData['id'] as String;
+
+      // 5. Upload certificate files if any
+      for (var file in _certificateFiles) {
+        final fileName = 'cert_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final filePath = '$trainerId/$fileName';
+        
+        final bytes = await file.readAsBytes();
+        await _supabase.storage.from('certificates').uploadBinary(
+          filePath, 
+          bytes,
+        );
+        final publicUrl = _supabase.storage.from('certificates').getPublicUrl(filePath);
+        
+        await _supabase.from('trainer_certifications').insert({
+          'trainer_id': trainerId,
+          'certification_name': 'Uploaded Document', 
+          'document_url': publicUrl,
+          'document_type': 'image',
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +239,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
           },
           controlsBuilder: (context, details) {
             return Padding(
-              padding: EdgeInsets.only(top: AppTheme.spacingMD),
+              padding: const EdgeInsets.only(top: AppTheme.spacingMD),
               child: Row(
                 children: [
                   Expanded(
@@ -198,7 +256,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
                   ),
                   if (_currentStep > 0) ...
                   [
-                    SizedBox(width: AppTheme.spacingSM),
+                    const SizedBox(width: AppTheme.spacingSM),
                     OutlinedButton(
                       onPressed: details.onStepCancel,
                       child: const Text('Back'),
@@ -248,7 +306,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
           ),
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _bioController,
@@ -260,7 +318,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.info_outline),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _phoneController,
@@ -270,7 +328,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.phone_outlined),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         // Date of Birth
         GestureDetector(
@@ -284,7 +342,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             if (picked != null) setState(() => _dateOfBirth = picked);
           },
           child: Container(
-            padding: EdgeInsets.all(AppTheme.spacingMD),
+            padding: const EdgeInsets.all(AppTheme.spacingMD),
             decoration: BoxDecoration(
               color: AppTheme.surfaceColor,
               borderRadius: BorderRadius.circular(16),
@@ -292,7 +350,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             child: Row(
               children: [
                 const Icon(Icons.cake_rounded, color: AppTheme.primaryColor),
-                SizedBox(width: AppTheme.spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
                 Text(
                   _dateOfBirth != null
                       ? 'Born: ${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
@@ -308,10 +366,10 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             ),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         DropdownButtonFormField<String>(
-          value: _selectedGender,
+          initialValue: _selectedGender,
           decoration: const InputDecoration(
             labelText: 'Gender',
             prefixIcon: Icon(Icons.wc_rounded),
@@ -338,25 +396,36 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.workspace_premium_rounded),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingXL),
+
+        // ── Price per Session ────────────────────────────────────────
+        Text('Set Your Price', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: AppTheme.spacingSM),
+        Text(
+          'Set your own price per session. You can change this anytime.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _priceController,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             labelText: 'Price per Session (₹) *',
-            hintText: 'e.g., 1500',
+            hintText: 'e.g., 500, 1000, 2000',
             prefixIcon: Icon(Icons.currency_rupee_rounded),
           ),
           validator: (v) {
-            if (v == null || v.isEmpty) return 'Please enter your session price';
+            if (v == null || v.isEmpty) return 'Please enter your price per session';
             if (int.tryParse(v) == null || int.parse(v) <= 0) {
               return 'Enter a valid price';
             }
             return null;
           },
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _credentialsController,
@@ -366,7 +435,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.school_rounded),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _membershipsController,
@@ -376,11 +445,11 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.card_membership_rounded),
           ),
         ),
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
 
         // Certificates input list
         Text('Certifications', style: Theme.of(context).textTheme.headlineMedium),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         Row(
           children: [
             Expanded(
@@ -392,7 +461,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
                 ),
               ),
             ),
-            SizedBox(width: AppTheme.spacingSM),
+            const SizedBox(width: AppTheme.spacingSM),
             IconButton(
               onPressed: () {
                 final cert = _certificateController.text.trim();
@@ -407,7 +476,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             ),
           ],
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -416,11 +485,40 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               label: Text(cert),
               deleteIcon: const Icon(Icons.close, size: 16),
               onDeleted: () => setState(() => _certificates.remove(cert)),
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.15),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
               labelStyle: const TextStyle(color: AppTheme.primaryColor),
             );
           }).toList(),
         ),
+
+        // ── Certificate Document Upload ──
+        const SizedBox(height: AppTheme.spacingXL),
+        Text('Certificate Documents', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: AppTheme.spacingSM),
+        Text('Upload photos of your certifications (optional)', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: AppTheme.spacingMD),
+        OutlinedButton.icon(
+          onPressed: _pickCertificateFile,
+          icon: const Icon(Icons.upload_file_rounded),
+          label: const Text('Upload Document'),
+        ),
+        if (_certificateFiles.isNotEmpty) ...[
+          const SizedBox(height: AppTheme.spacingMD),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _certificateFiles.map((file) {
+              final fileName = file.name;
+              return Chip(
+                label: Text(fileName, overflow: TextOverflow.ellipsis, maxLines: 1),
+                deleteIcon: const Icon(Icons.close, size: 16),
+                onDeleted: () => setState(() => _certificateFiles.remove(file)),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+                labelStyle: const TextStyle(color: AppTheme.primaryColor, fontSize: 12),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
@@ -448,13 +546,13 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: atMax
-                    ? AppTheme.primaryColor.withOpacity(0.15)
+                    ? AppTheme.primaryColor.withValues(alpha: 0.15)
                     : AppTheme.surfaceColor,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: atMax
                       ? AppTheme.primaryColor
-                      : AppTheme.textSecondary.withOpacity(0.3),
+                      : AppTheme.textSecondary.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -467,14 +565,14 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             ),
           ],
         ),
-        SizedBox(height: AppTheme.spacingXS),
+        const SizedBox(height: AppTheme.spacingXS),
         Text(
           'Choose up to $_maxSpecialties specialties that best describe your training expertise.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: AppTheme.textSecondary,
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         // Category chips
         Wrap(
@@ -491,11 +589,11 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
                   : (selected) {
                       if (selected && _selectedCategories.length >= _maxSpecialties) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text(
                               'You can select up to $_maxSpecialties specialties only.',
                             ),
-                            duration: const Duration(seconds: 2),
+                            duration: Duration(seconds: 2),
                           ),
                         );
                         return;
@@ -508,11 +606,11 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
                         }
                       });
                     },
-              selectedColor: AppTheme.primaryColor.withOpacity(0.25),
+              selectedColor: AppTheme.primaryColor.withValues(alpha: 0.25),
               checkmarkColor: AppTheme.primaryColor,
               labelStyle: TextStyle(
                 color: isDisabled
-                    ? AppTheme.textSecondary.withOpacity(0.4)
+                    ? AppTheme.textSecondary.withValues(alpha: 0.4)
                     : isSelected
                         ? AppTheme.primaryColor
                         : AppTheme.textPrimary,
@@ -521,19 +619,19 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               side: BorderSide(
                 color: isSelected
                     ? AppTheme.primaryColor
-                    : AppTheme.textSecondary.withOpacity(isDisabled ? 0.15 : 0.3),
+                    : AppTheme.textSecondary.withValues(alpha: isDisabled ? 0.15 : 0.3),
               ),
               backgroundColor: isDisabled
-                  ? AppTheme.surfaceColor.withOpacity(0.5)
+                  ? AppTheme.surfaceColor.withValues(alpha: 0.5)
                   : AppTheme.surfaceColor,
             );
           }).toList(),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         // Preferences
         DropdownButtonFormField<String>(
-          value: _selectedDemographic,
+          initialValue: _selectedDemographic,
           decoration: const InputDecoration(
             labelText: 'Target Demographic',
             prefixIcon: Icon(Icons.people_rounded),
@@ -543,10 +641,10 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               .toList(),
           onChanged: (v) => setState(() => _selectedDemographic = v),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         DropdownButtonFormField<String>(
-          value: _selectedTrainingMode,
+          initialValue: _selectedTrainingMode,
           decoration: const InputDecoration(
             labelText: 'Training Mode / Preference',
             prefixIcon: Icon(Icons.play_circle_outline_rounded),
@@ -572,7 +670,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.location_on_rounded),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         TextFormField(
           controller: _gymNameController,
@@ -582,10 +680,10 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
             prefixIcon: Icon(Icons.fitness_center_rounded),
           ),
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         DropdownButtonFormField<String>(
-          value: _selectedRange,
+          initialValue: _selectedRange,
           decoration: const InputDecoration(
             labelText: 'Travel Range / Distance',
             prefixIcon: Icon(Icons.social_distance_rounded),
@@ -595,10 +693,10 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               .toList(),
           onChanged: (v) => setState(() => _selectedRange = v),
         ),
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
 
         Text('Preferred Time Slots', style: Theme.of(context).textTheme.headlineMedium),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -616,7 +714,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
                   }
                 });
               },
-              selectedColor: AppTheme.accentColor.withOpacity(0.2),
+              selectedColor: AppTheme.accentColor.withValues(alpha: 0.2),
               checkmarkColor: AppTheme.accentColor,
               labelStyle: TextStyle(
                 color: isSelected ? AppTheme.accentColor : AppTheme.textPrimary,
@@ -625,7 +723,7 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
               side: BorderSide(
                 color: isSelected
                     ? AppTheme.accentColor
-                    : AppTheme.textSecondary.withOpacity(0.3),
+                    : AppTheme.textSecondary.withValues(alpha: 0.3),
               ),
               backgroundColor: AppTheme.surfaceColor,
             );
@@ -635,3 +733,4 @@ class _TrainerOnboardingScreenState extends State<TrainerOnboardingScreen> {
     );
   }
 }
+

@@ -6,6 +6,8 @@ import '../../services/messaging_service.dart';
 import '../../models/message_model.dart';
 import '../../config/theme.dart';
 import '../../services/support_service.dart';
+import '../../services/trainer_service.dart';
+import '../trainers/trainer_detail_screen_modern.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -183,7 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
-            SizedBox(width: AppTheme.spacingMD),
+            const SizedBox(width: AppTheme.spacingMD),
             // Name
             Expanded(
               child: Column(
@@ -208,6 +210,29 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_rounded),
+            color: AppTheme.primaryColor,
+            tooltip: 'Book Session',
+            onPressed: () async {
+              final trainerService = context.read<TrainerService>();
+              final trainerData = await trainerService.getTrainerByUserId(widget.otherUserId);
+              
+              if (!mounted) return;
+              if (trainerData != null && trainerData['trainer_id'] != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TrainerDetailScreen(trainerId: trainerData['trainer_id'] as String),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cannot book a session with this user.')),
+                );
+              }
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) async {
@@ -215,8 +240,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 final currentUserId = context.read<AuthProvider>().user?.id;
                 if (currentUserId == null) return;
                 
+                final supportService = context.read<SupportService>();
                 try {
-                  await context.read<SupportService>().submitSupportRequest(
+                  await supportService.submitSupportRequest(
                     userId: currentUserId,
                     category: 'Report Chat',
                     description: 'Reported conversation ${widget.conversationId} with user ${widget.otherUserId} (${widget.otherUserName}).',
@@ -270,16 +296,16 @@ class _ChatScreenState extends State<ChatScreen> {
           Icon(
             Icons.chat_bubble_outline_rounded,
             size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withValues(alpha: 0.5),
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           Text(
             'No Messages Yet',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: AppTheme.textSecondary,
             ),
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           Text(
             'Start the conversation!',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -294,7 +320,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final message = _messages[index];
@@ -317,7 +343,7 @@ class _ChatScreenState extends State<ChatScreen> {
     required bool showAvatar,
   }) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppTheme.spacingSM),
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingSM),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -340,14 +366,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
-            SizedBox(width: AppTheme.spacingXS),
+            const SizedBox(width: AppTheme.spacingXS),
           ],
           if (!isMe && !showAvatar) const SizedBox(width: 40),
 
           // Message Bubble
           Flexible(
             child: Container(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppTheme.spacingMD,
                 vertical: AppTheme.spacingSM,
               ),
@@ -374,7 +400,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: isMe ? AppTheme.backgroundColor : AppTheme.textPrimary,
                     ),
                   ),
-                  SizedBox(height: AppTheme.spacingXS),
+                  const SizedBox(height: AppTheme.spacingXS),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -382,19 +408,19 @@ class _ChatScreenState extends State<ChatScreen> {
                         message.formattedTime,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: isMe
-                              ? AppTheme.backgroundColor.withOpacity(0.7)
+                              ? AppTheme.backgroundColor.withValues(alpha: 0.7)
                               : AppTheme.textSecondary,
                           fontSize: 10,
                         ),
                       ),
                       if (isMe) ...[
-                        SizedBox(width: AppTheme.spacingXS),
+                        const SizedBox(width: AppTheme.spacingXS),
                         Icon(
                           message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
                           size: 14,
                           color: message.isRead
                               ? AppTheme.accentColor
-                              : AppTheme.backgroundColor.withOpacity(0.7),
+                              : AppTheme.backgroundColor.withValues(alpha: 0.7),
                         ),
                       ],
                     ],
@@ -404,7 +430,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          if (isMe && showAvatar) SizedBox(width: AppTheme.spacingXS),
+          if (isMe && showAvatar) const SizedBox(width: AppTheme.spacingXS),
         ],
       ),
     );
@@ -412,16 +438,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppTheme.surfaceColor, AppTheme.cardColor],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -437,7 +463,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: AppTheme.backgroundColor,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -446,10 +472,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   decoration: InputDecoration(
                     hintText: 'Type a message...',
                     hintStyle: TextStyle(
-                      color: AppTheme.textSecondary.withOpacity(0.5),
+                      color: AppTheme.textSecondary.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingMD,
                       vertical: AppTheme.spacingSM,
                     ),
@@ -462,7 +488,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
-            SizedBox(width: AppTheme.spacingSM),
+            const SizedBox(width: AppTheme.spacingSM),
 
             // Send Button
             GestureDetector(

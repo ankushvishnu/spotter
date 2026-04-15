@@ -5,12 +5,14 @@ class PaymentSuccessScreen extends StatefulWidget {
   final String bookingId;
   final int amount;
   final String trainerName;
+  final bool isCreditPurchase;
 
   const PaymentSuccessScreen({
     super.key,
     required this.bookingId,
     required this.amount,
     required this.trainerName,
+    this.isCreditPurchase = false,
   });
 
   @override
@@ -53,7 +55,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(AppTheme.spacingLG),
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
           child: Column(
             children: [
               const Spacer(),
@@ -77,7 +79,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
 
               // Success Message
               FadeTransition(
@@ -91,9 +93,11 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: AppTheme.spacingMD),
+                    const SizedBox(height: AppTheme.spacingMD),
                     Text(
-                      'Your session with ${widget.trainerName} has been booked',
+                      widget.isCreditPurchase
+                          ? 'Your credits have been successfully added to your wallet'
+                          : 'Your session with ${widget.trainerName} has been booked',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppTheme.textSecondary,
                       ),
@@ -103,18 +107,18 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
 
               // Booking Details Card
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Container(
-                  padding: EdgeInsets.all(AppTheme.spacingLG),
+                  padding: const EdgeInsets.all(AppTheme.spacingLG),
                   decoration: BoxDecoration(
                     gradient: AppTheme.cardGradient,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppTheme.primaryColor.withOpacity(0.2),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -126,7 +130,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                       ),
                       Divider(
                         height: AppTheme.spacingLG,
-                        color: AppTheme.textSecondary.withOpacity(0.2),
+                        color: AppTheme.textSecondary.withValues(alpha: 0.2),
                       ),
                       _buildDetailRow(
                         icon: Icons.payment_rounded,
@@ -135,42 +139,44 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                       ),
                       Divider(
                         height: AppTheme.spacingLG,
-                        color: AppTheme.textSecondary.withOpacity(0.2),
+                        color: AppTheme.textSecondary.withValues(alpha: 0.2),
                       ),
                       _buildDetailRow(
                         icon: Icons.check_circle_rounded,
                         label: 'Status',
-                        value: 'Pending Approval',
-                        valueColor: AppTheme.warningColor,
+                        value: widget.isCreditPurchase ? 'Credits Added' : 'Pending Approval',
+                        valueColor: widget.isCreditPurchase ? AppTheme.successColor : AppTheme.warningColor,
                       ),
                     ],
                   ),
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingXL),
+              const SizedBox(height: AppTheme.spacingXL),
 
               // Info Box
               Container(
-                padding: EdgeInsets.all(AppTheme.spacingMD),
+                padding: const EdgeInsets.all(AppTheme.spacingMD),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentColor.withOpacity(0.1),
+                  color: AppTheme.accentColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.accentColor.withOpacity(0.3),
+                    color: AppTheme.accentColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       color: AppTheme.accentColor,
                       size: 20,
                     ),
-                    SizedBox(width: AppTheme.spacingMD),
+                    const SizedBox(width: AppTheme.spacingMD),
                     Expanded(
                       child: Text(
-                        'The trainer will confirm your booking request soon. You\'ll be notified once confirmed.',
+                        widget.isCreditPurchase
+                            ? 'You can now use these credits to instantly book sessions with any trainer on the platform.'
+                            : 'The trainer will confirm your booking request soon. You\'ll be notified once confirmed.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.accentColor,
                         ),
@@ -190,20 +196,20 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
                   ),
                   child: const Text('BACK TO HOME'),
                 ),
               ),
 
-              SizedBox(height: AppTheme.spacingMD),
+              const SizedBox(height: AppTheme.spacingMD),
 
               TextButton(
                 onPressed: () {
-                  // TODO: Navigate to bookings
+                  // TODO: Navigate to bookings or credits correctly
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
-                child: const Text('View My Bookings'),
+                child: Text(widget.isCreditPurchase ? 'View My Credits' : 'View My Bookings'),
               ),
             ],
           ),
@@ -221,7 +227,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     return Row(
       children: [
         Icon(icon, color: AppTheme.primaryColor, size: 20),
-        SizedBox(width: AppTheme.spacingMD),
+        const SizedBox(width: AppTheme.spacingMD),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

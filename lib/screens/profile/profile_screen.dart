@@ -3,10 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
+import '../../services/trainer_service.dart';
 import '../../services/credits_service.dart';
+import '../../services/booking_service.dart';
+import '../../services/review_service.dart';
 import '../../models/user_model.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
+import '../../utils/image_utils.dart';
 import '../trainers/trainer_bookings_screen.dart';
 import '../credits/credits_history_screen.dart';
 import '../settings/settings_screen.dart';
@@ -29,9 +33,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   
   UserModel? _user;
+  Map<String, dynamic>? _trainerProfile;
   bool _isLoading = true;
   bool _isEditing = false;
   int _currentCredits = 0;
+  int _sessionsCount = 0;
+  int _reviewsCount = 0;
 
   // Controllers
   final _nameController = TextEditingController();
@@ -66,14 +73,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await _profileService.getCurrentUserProfile();
+      if (!mounted) return;
       int credits = 0;
+      int sessions = 0;
+      int reviews = 0;
       if (user != null) {
-        credits = await _creditsService.getUserCredits(user.id);
+        final bookingService = BookingService();
+        final reviewService = ReviewService();
+        
+        final trainerService = context.read<TrainerService>();
+        
+        // Fetch all stats in parallel
+        final results = await Future.wait([
+          _creditsService.getUserCredits(user.id),
+          bookingService.getPastBookings(user.id),
+          reviewService.getUserReviewsCount(user.id),
+        ]);
+        if (!mounted) return;
+        credits = results[0] as int;
+        sessions = (results[1] as List).length;
+        reviews = results[2] as int;
+
+        if (user.role == 'trainer') {
+          _trainerProfile = await trainerService.getTrainerByUserId(user.id);
+        }
       }
       if (user != null) {
         setState(() {
           _user = user;
           _currentCredits = credits;
+          _sessionsCount = sessions;
+          _reviewsCount = reviews;
           _nameController.text = user.fullName;
           _bioController.text = user.bio ?? '';
           _phoneController.text = user.phone ?? '';
@@ -178,38 +208,239 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _user == null
-              ? _buildErrorState()
+              ? _buildUnauthenticatedState()
               : _isEditing
                   ? _buildEditMode()
                   : _buildViewMode(),
     );
   }
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            size: 64,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+  Widget _buildUnauthenticatedState() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.backgroundColor,
+      ),
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 220,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppTheme.backgroundColor,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.primaryColor.withValues(alpha: 0.2),
+                      AppTheme.backgroundColor,
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 48,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              title: const Text(
+                'SPOTTER PRO',
+                style: TextStyle(
+                  fontFamily: 'Bebas Neue',
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              centerTitle: true,
+            ),
           ),
-          SizedBox(height: AppTheme.spacingMD),
-          Text(
-            'Error Loading Profile',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          SizedBox(height: AppTheme.spacingSM),
-          TextButton(
-            onPressed: _loadProfile,
-            child: const Text('Retry'),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'AI-POWERED FITNESS',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Unlock your full potential with intelligent AI tools designed for your elite fitness journey.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 16,
+                      height: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  _buildAiFeatureItemLux(
+                    icon: Icons.psychology_rounded,
+                    title: 'Personal Motivator',
+                    description: 'Get real-time psychological cues and habit-building strategies to stay consistent.',
+                    gradient: const LinearGradient(colors: [Color(0xFFFF5C1A), Color(0xFFFF9E1A)]),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildAiFeatureItemLux(
+                    icon: Icons.restaurant_menu_rounded,
+                    title: 'Smart Nutritionist',
+                    description: 'Instant macro-optimized meal plans based on what\'s in your fridge.',
+                    gradient: const LinearGradient(colors: [Color(0xFF8A2BE2), Color(0xFF4B0082)]),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildAiFeatureItemLux(
+                    icon: Icons.calendar_month_rounded,
+                    title: 'Schedule Architect',
+                    description: 'Dynamically adapts your training blocks when life gets busy.',
+                    gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFDAA520)]),
+                  ),
+                  const SizedBox(height: 64),
+                  Container(
+                    width: double.infinity,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'GET STARTED NOW',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        // Navigate to AI explore
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AIAgentScreen()),
+                        );
+                      },
+                      child: const Text(
+                        'EXPLORE AI FEATURES →',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildAiFeatureItemLux({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Gradient gradient,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: (gradient as LinearGradient).colors.first.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                description,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
   Widget _buildViewMode() {
     return CustomScrollView(
       slivers: [
@@ -219,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SliverToBoxAdapter(child: _buildInfoSection()),
         SliverToBoxAdapter(child: _buildPreferencesSection()),
         SliverToBoxAdapter(child: _buildActionsSection()),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
       ],
     );
   }
@@ -242,14 +473,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.edit_rounded),
           onPressed: () => setState(() => _isEditing = true),
         ),
-        SizedBox(width: AppTheme.spacingSM),
+        const SizedBox(width: AppTheme.spacingSM),
       ],
     );
   }
 
   Widget _buildProfileHeader() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Column(
         children: [
           // Avatar
@@ -264,20 +495,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   boxShadow: [AppTheme.primaryGlow],
                 ),
                 padding: const EdgeInsets.all(4),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(56),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _user!.fullName[0].toUpperCase(),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(56),
+                  child: _user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty
+                      ? Image.network(
+                          corsProxyUrl(_user!.avatarUrl!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildProfileInitial(),
+                        )
+                      : _buildProfileInitial(),
                 ),
               ),
               Positioned(
@@ -303,7 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           
           // Name
           Text(
@@ -312,7 +538,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             textAlign: TextAlign.center,
           ),
           
-          SizedBox(height: AppTheme.spacingXS),
+          const SizedBox(height: AppTheme.spacingXS),
           
           // Email
           Text(
@@ -323,7 +549,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           
           if (_user!.bio != null && _user!.bio!.isNotEmpty) ...[
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
             Text(
               _user!.bio!,
               style: Theme.of(context).textTheme.bodyMedium,
@@ -335,9 +561,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildProfileInitial() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(56),
+      ),
+      child: Center(
+        child: Text(
+          _user!.fullName.isNotEmpty ? _user!.fullName[0].toUpperCase() : '?',
+          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStats() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
       child: Column(
         children: [
           Row(
@@ -345,19 +589,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildStatCard(
                   icon: Icons.fitness_center_rounded,
-                  value: '0',
+                  value: '$_sessionsCount',
                   label: 'Sessions',
                 ),
               ),
-              SizedBox(width: AppTheme.spacingSM),
+              const SizedBox(width: AppTheme.spacingSM),
               Expanded(
                 child: _buildStatCard(
                   icon: Icons.star_rounded,
-                  value: '0',
+                  value: '$_reviewsCount',
                   label: 'Reviews',
                 ),
               ),
-              SizedBox(width: AppTheme.spacingSM),
+              const SizedBox(width: AppTheme.spacingSM),
               Expanded(
                 child: _buildStatCard(
                   icon: Icons.bookmark_rounded,
@@ -367,38 +611,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           // Credits Banner
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => BuyCreditsScreen(),
+                  builder: (_) => const BuyCreditsScreen(),
                 ),
               ).then((_) => _loadProfile());
             },
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.all(AppTheme.spacingMD),
+              padding: const EdgeInsets.all(AppTheme.spacingMD),
               decoration: BoxDecoration(
                 gradient: AppTheme.cardGradient,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                    color: AppTheme.primaryColor.withOpacity(0.3)),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.15),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.account_balance_wallet_rounded,
                         color: AppTheme.primaryColor, size: 22),
                   ),
-                  SizedBox(width: AppTheme.spacingMD),
+                  const SizedBox(width: AppTheme.spacingMD),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,19 +679,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
   }) {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
       child: Column(
         children: [
           Icon(icon, color: AppTheme.primaryColor, size: 24),
-          SizedBox(height: AppTheme.spacingXS),
+          const SizedBox(height: AppTheme.spacingXS),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -466,8 +710,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildInfoSection() {
     return Container(
-      margin: EdgeInsets.all(AppTheme.spacingLG),
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      margin: const EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -479,7 +723,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Personal Info',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           
           if (_user!.phone != null)
             _buildInfoRow(Icons.phone_rounded, 'Phone', _user!.phone!),
@@ -503,18 +747,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppTheme.spacingMD),
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingMD),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: AppTheme.primaryColor, size: 20),
           ),
-          SizedBox(width: AppTheme.spacingMD),
+          const SizedBox(width: AppTheme.spacingMD),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,8 +783,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildPreferencesSection() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
@@ -549,12 +793,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Fitness Preferences',
+            _user!.role == 'trainer' ? 'Trainer Professional Details' : 'Fitness Preferences',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppTheme.spacingMD),
+          const SizedBox(height: AppTheme.spacingMD),
           
-          // Goals
+          if (_user!.role == 'trainer' && _trainerProfile != null) ...[
+            _buildInfoRow(Icons.monetization_on_rounded, 'Price per Session', '₹${_trainerProfile!['price_per_session'] ?? 500}'),
+            if (_trainerProfile!['years_of_experience'] != null)
+              _buildInfoRow(Icons.workspace_premium_rounded, 'Experience', '${_trainerProfile!['years_of_experience']} Years'),
+            if (_trainerProfile!['specialties'] != null) ...[
+              Text(
+                'Specialties',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: AppTheme.spacingXS),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List<String>.from(_trainerProfile!['specialties']).map((specialty) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      specialty,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.accentColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppTheme.spacingMD),
+            ],
+            if (_trainerProfile!['certifications'] != null) ...[
+              Text(
+                'Certifications',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: AppTheme.spacingXS),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List<String>.from(_trainerProfile!['certifications']).map((cert) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      cert,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppTheme.spacingMD),
+            ]
+          ] else ...[
+            // Goals
           if (_user!.fitnessGoals != null && _user!.fitnessGoals!.isNotEmpty) ...[
             Text(
               'Goals',
@@ -562,7 +867,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppTheme.textSecondary,
               ),
             ),
-            SizedBox(height: AppTheme.spacingXS),
+            const SizedBox(height: AppTheme.spacingXS),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -570,7 +875,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -583,7 +888,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }).toList(),
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
           ],
           
           // Specialties
@@ -594,7 +899,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppTheme.textSecondary,
               ),
             ),
-            SizedBox(height: AppTheme.spacingXS),
+            const SizedBox(height: AppTheme.spacingXS),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -602,7 +907,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentColor.withOpacity(0.2),
+                    color: AppTheme.accentColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -615,24 +920,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }).toList(),
             ),
-            SizedBox(height: AppTheme.spacingMD),
+            const SizedBox(height: AppTheme.spacingMD),
           ],
           
-          // Budget
-          Text(
-            'Budget Range',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textSecondary,
+            // Budget
+            Text(
+              'Budget Range',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
             ),
-          ),
-          SizedBox(height: AppTheme.spacingXS),
-          Text(
-            '₹${_user!.budgetMin ?? 1000} - ₹${_user!.budgetMax ?? 5000} per session',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.primaryColor,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: AppTheme.spacingXS),
+            Text(
+              '₹${_user!.budgetMin ?? 1000} - ₹${_user!.budgetMax ?? 5000} per session',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -640,7 +946,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildActionsSection() {
     return Padding(
-      padding: EdgeInsets.all(AppTheme.spacingLG),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Column(
         children: [
           // Show trainer schedule button if user is a trainer
@@ -658,7 +964,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
             _buildActionButton(
               icon: Icons.manage_accounts_rounded,
               label: 'Edit Trainer Profile',
@@ -667,12 +973,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TrainerOnboardingScreen(isEditing: true),
+                    builder: (context) => const TrainerOnboardingScreen(isEditing: true),
                   ),
                 ).then((_) => _loadProfile());
               },
             ),
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
           ],
           _buildActionButton(
             icon: Icons.settings_rounded,
@@ -684,7 +990,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           _buildActionButton(
             icon: Icons.receipt_long_rounded,
             label: 'Credit History',
@@ -697,7 +1003,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
         _buildActionButton(
             icon: Icons.help_outline_rounded,
             label: 'Help & Support',
@@ -708,7 +1014,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-          SizedBox(height: AppTheme.spacingSM),
+          const SizedBox(height: AppTheme.spacingSM),
           _buildActionButton(
             icon: Icons.logout_rounded,
             label: 'Logout',
@@ -760,7 +1066,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(AppTheme.spacingMD),
+        padding: const EdgeInsets.all(AppTheme.spacingMD),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(16),
@@ -768,7 +1074,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Row(
           children: [
             Icon(icon, color: color ?? AppTheme.primaryColor),
-            SizedBox(width: AppTheme.spacingMD),
+            const SizedBox(width: AppTheme.spacingMD),
             Expanded(
               child: Text(
                 label,
@@ -777,7 +1083,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            Icon(
+            const Icon(
               Icons.chevron_right_rounded,
               color: AppTheme.textSecondary,
             ),
@@ -807,11 +1113,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: _saveProfile,
               child: const Text('Save'),
             ),
-            SizedBox(width: AppTheme.spacingSM),
+            const SizedBox(width: AppTheme.spacingSM),
           ],
         ),
         SliverPadding(
-          padding: EdgeInsets.all(AppTheme.spacingLG),
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildEditForm(),
@@ -831,7 +1137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'Basic Information',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
         
         TextFormField(
           controller: _nameController,
@@ -841,7 +1147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
         
         TextFormField(
           controller: _bioController,
@@ -852,7 +1158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           maxLines: 3,
         ),
         
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
         
         TextFormField(
           controller: _phoneController,
@@ -863,18 +1169,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           keyboardType: TextInputType.phone,
         ),
         
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
         
         // Fitness Info
         Text(
           'Fitness Information',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
         
         // Fitness Level
         DropdownButtonFormField<String>(
-          value: _selectedFitnessLevel,
+          initialValue: _selectedFitnessLevel,
           decoration: const InputDecoration(
             labelText: 'Fitness Level',
             prefixIcon: Icon(Icons.trending_up_rounded),
@@ -890,11 +1196,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
         
-        SizedBox(height: AppTheme.spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
         
         // Gender
         DropdownButtonFormField<String>(
-          value: _selectedGender,
+          initialValue: _selectedGender,
           decoration: const InputDecoration(
             labelText: 'Gender',
             prefixIcon: Icon(Icons.person_outline),
@@ -910,14 +1216,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
         
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
         
         // Fitness Goals
         Text(
           'Fitness Goals',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -939,7 +1245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: isSelected ? AppTheme.primaryColor : AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary.withOpacity(0.3),
+                    color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -954,14 +1260,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }).toList(),
         ),
         
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
         
         // Preferred Specialties
         Text(
           'Preferred Specialties',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -983,7 +1289,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: isSelected ? AppTheme.accentColor : AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppTheme.accentColor : AppTheme.textSecondary.withOpacity(0.3),
+                    color: isSelected ? AppTheme.accentColor : AppTheme.textSecondary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -998,21 +1304,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }).toList(),
         ),
         
-        SizedBox(height: AppTheme.spacingXL),
+        const SizedBox(height: AppTheme.spacingXL),
         
         // Budget Range
         Text(
           'Budget Range: ₹${_budgetMin.toInt()} - ₹${_budgetMax.toInt()}',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
-        SizedBox(height: AppTheme.spacingSM),
+        const SizedBox(height: AppTheme.spacingSM),
         RangeSlider(
           values: RangeValues(_budgetMin, _budgetMax),
           min: AppConstants.minPrice.toDouble(),
           max: AppConstants.maxPrice.toDouble(),
           divisions: 40,
           activeColor: AppTheme.primaryColor,
-          inactiveColor: AppTheme.textSecondary.withOpacity(0.2),
+          inactiveColor: AppTheme.textSecondary.withValues(alpha: 0.2),
           labels: RangeLabels(
             '₹${_budgetMin.toInt()}',
             '₹${_budgetMax.toInt()}',
@@ -1025,7 +1331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
         
-        SizedBox(height: AppTheme.spacingXXL),
+        const SizedBox(height: AppTheme.spacingXXL),
       ],
     );
   }

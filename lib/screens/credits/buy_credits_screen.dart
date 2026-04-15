@@ -66,6 +66,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
               bookingId: 'credits-${DateTime.now().millisecondsSinceEpoch}',
               amount: package.price,
               trainerName: '${package.credits} Session Credit(s)',
+              isCreditPurchase: true,
             ),
           ),
         ).then((_) => _loadBalance());
@@ -92,27 +93,27 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppTheme.spacingLG),
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Current balance banner
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(AppTheme.spacingLG),
+              padding: const EdgeInsets.all(AppTheme.spacingLG),
               decoration: BoxDecoration(
                 gradient: AppTheme.cardGradient,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(AppTheme.spacingMD),
+                    padding: const EdgeInsets.all(AppTheme.spacingMD),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.15),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(
@@ -121,7 +122,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
                       size: 32,
                     ),
                   ),
-                  SizedBox(width: AppTheme.spacingMD),
+                  const SizedBox(width: AppTheme.spacingMD),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -149,40 +150,40 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
               ),
             ),
 
-            SizedBox(height: AppTheme.spacingXL),
+            const SizedBox(height: AppTheme.spacingXL),
 
             Text(
               'Choose a Package',
               style: Theme.of(context).textTheme.headlineLarge,
             ),
-            SizedBox(height: AppTheme.spacingSM),
+            const SizedBox(height: AppTheme.spacingSM),
             Text(
               '1 credit = 1 confirmed session',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
 
             ...packages.map((package) => Padding(
-              padding: EdgeInsets.only(bottom: AppTheme.spacingMD),
+              padding: const EdgeInsets.only(bottom: AppTheme.spacingMD),
               child: _buildPackageCard(package),
             )),
 
-            SizedBox(height: AppTheme.spacingXL),
+            const SizedBox(height: AppTheme.spacingXL),
 
             // Info box
             Container(
-              padding: EdgeInsets.all(AppTheme.spacingMD),
+              padding: const EdgeInsets.all(AppTheme.spacingMD),
               decoration: BoxDecoration(
-                color: AppTheme.accentColor.withOpacity(0.1),
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.accentColor.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.info_outline_rounded,
                       color: AppTheme.accentColor, size: 20),
-                  SizedBox(width: AppTheme.spacingSM),
+                  const SizedBox(width: AppTheme.spacingSM),
                   Expanded(
                     child: Text(
                       'Credits are deducted when a booking is confirmed by the trainer. Unused credits never expire.',
@@ -196,7 +197,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
               ),
             ),
 
-            SizedBox(height: AppTheme.spacingLG),
+            const SizedBox(height: AppTheme.spacingLG),
           ],
         ),
       ),
@@ -214,7 +215,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
         children: [
           AnimatedContainer(
             duration: AppTheme.fastAnimation,
-            padding: EdgeInsets.all(AppTheme.spacingLG),
+            padding: const EdgeInsets.all(AppTheme.spacingLG),
             decoration: BoxDecoration(
               gradient: package.discount > 0
                   ? AppTheme.primaryGradient
@@ -229,7 +230,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: AppTheme.backgroundColor.withOpacity(0.25),
+                    color: AppTheme.backgroundColor.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
@@ -244,7 +245,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: AppTheme.spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
 
                 // Details
                 Expanded(
@@ -267,7 +268,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
                               .textTheme
                               .bodySmall
                               ?.copyWith(
-                                color: AppTheme.backgroundColor.withOpacity(0.8),
+                                color: AppTheme.backgroundColor.withValues(alpha: 0.8),
                               ),
                         ),
                     ],
@@ -304,7 +305,7 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
                         '₹${package.originalPrice}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: AppTheme.backgroundColor.withOpacity(0.6),
+                          color: AppTheme.backgroundColor.withValues(alpha: 0.6),
                         ),
                       ),
                   ],
@@ -339,3 +340,4 @@ class _BuyCreditsScreenState extends State<BuyCreditsScreen> {
     );
   }
 }
+

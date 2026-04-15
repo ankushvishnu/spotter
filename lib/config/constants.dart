@@ -51,8 +51,16 @@ class AppConstants {
   static const int maxPrice = 5000;
   
   // Subscription Tiers
-  static const String freeTier = 'free';
+  static const String standardTier = 'standard';
   static const String proTier = 'pro';
+  static const String eliteTier = 'elite';
+
+  // Supported Cities (for manual city filter)
+  static const List<String> supportedCities = [
+    'Pune',
+    'Mumbai',
+    'Bengaluru',
+  ];
   
   // Rating Thresholds
   static const double minRating = 1.0;

@@ -21,6 +21,7 @@ class TrainerModel {
   final bool isPremium;
   final List<String>? profilePhotos;
   final double? distanceMeters; // For nearby search results
+  final String userTier; // standard, pro, elite — from users.tier join
 
   TrainerModel({
     required this.id,
@@ -43,6 +44,7 @@ class TrainerModel {
     this.isPremium = false,
     this.profilePhotos,
     this.distanceMeters,
+    this.userTier = 'standard',
   });
 
   factory TrainerModel.fromJson(Map<String, dynamic> json) {
@@ -81,6 +83,7 @@ class TrainerModel {
       distanceMeters: json['distance_meters'] != null
           ? double.parse(json['distance_meters'].toString())
           : null,
+      userTier: json['user_tier'] ?? json['tier'] ?? 'standard',
     );
   }
 
