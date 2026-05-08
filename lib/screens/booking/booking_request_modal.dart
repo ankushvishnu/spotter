@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/booking_service.dart';
+import '../../services/credits_service.dart';
 import '../../models/trainer_model.dart';
 import '../../models/trainer_availability.dart';
 import '../../models/blocked_slot.dart';
 import '../../config/theme.dart';
 import '../../utils/app_exception.dart';
 import 'payment_success_screen.dart';
+import '../credits/buy_credits_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class BookingRequestModal extends StatefulWidget {
@@ -24,6 +26,7 @@ class BookingRequestModal extends StatefulWidget {
 
 class _BookingRequestModalState extends State<BookingRequestModal> {
   final BookingService _bookingService = BookingService();
+  final CreditsService _creditsService = CreditsService();
   final PageController _pageCtrl = PageController();
 
   // Data
@@ -42,6 +45,10 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
   String _selectedLocation = 'trainer_space';
   bool _isLoading = false;
 
+  // Credit state
+  int _userCredits = 0;
+  bool _loadingCredits = true;
+
   // Per-date times (opt-in)
   Map<String, TimeOfDay>? _perDateTimes; // dateStr → time
 
@@ -58,6 +65,7 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
   void initState() {
     super.initState();
     _loadAvailability();
+    _loadUserCredits();
   }
 
   @override
@@ -90,6 +98,27 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
       }
     }
   }
+
+  Future<void> _loadUserCredits() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+    try {
+      final credits = await _creditsService.getUserCredits(userId);
+      if (mounted) {
+        setState(() {
+          _userCredits = credits;
+          _loadingCredits = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingCredits = false);
+      }
+    }
+  }
+
+  int get _creditsRequired => _selectedDates.length;
+  bool get _hasInsufficientCredits => !_loadingCredits && _userCredits < _creditsRequired;
 
   /// Pre-fetch blocked slots for a date when it's selected
   Future<void> _fetchBlockedSlots(DateTime date) async {
@@ -196,7 +225,7 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
   int get _totalPrice => (_currentPrice + _platformFee) * (_selectedDates.isEmpty ? 1 : _selectedDates.length);
 
   bool get _canConfirmBooking =>
-      _selectedTime != null && _selectedDuration != null && _selectedCategory != null && _selectedDates.isNotEmpty;
+      _selectedTime != null && _selectedDuration != null && _selectedCategory != null && _selectedDates.isNotEmpty && !_hasInsufficientCredits;
 
   Future<void> _showPerDateTimePromptAndBook() async {
     if (!_canConfirmBooking) return;
@@ -731,6 +760,10 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
 
                 const SizedBox(height: 24),
 
+                // ── Credit Balance Banner ────────────────────────────
+                _buildCreditsBanner(),
+                const SizedBox(height: 16),
+
                 // ── Price Breakdown ─────────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -763,8 +796,12 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          'Requires ${_selectedDates.length} Credit${_selectedDates.length > 1 ? 's' : ''}',
-                          style: TextStyle(color: AppTheme.accentColor, fontWeight: FontWeight.bold, fontSize: 12),
+                          'Requires $_creditsRequired Credit${_creditsRequired > 1 ? 's' : ''}',
+                          style: TextStyle(
+                            color: _hasInsufficientCredits ? AppTheme.errorColor : AppTheme.accentColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -777,9 +814,11 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
         ),
         // Bottom confirm button
         _buildBottomButton(
-          label: _canConfirmBooking
-              ? 'Confirm Booking — ₹$_totalPrice'
-              : 'Select time, duration & type',
+          label: _hasInsufficientCredits
+              ? 'Insufficient Credits ($_userCredits/$_creditsRequired)'
+              : (_canConfirmBooking
+                  ? 'Confirm Booking — ₹$_totalPrice'
+                  : 'Select time, duration & type'),
           enabled: _canConfirmBooking,
           onTap: _showPerDateTimePromptAndBook,
           isLoading: _isLoading,
@@ -839,6 +878,122 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
           ),
         ),
       ],
+    );
+  }
+
+  // ─── CREDITS BANNER ─────────────────────────────────────────────────────────
+
+  Widget _buildCreditsBanner() {
+    if (_loadingCredits) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.textSecondary.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor)),
+            const SizedBox(width: 12),
+            Text('Loading credit balance...', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    final insufficient = _hasInsufficientCredits;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: insufficient
+            ? AppTheme.errorColor.withValues(alpha: 0.08)
+            : AppTheme.successColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: insufficient
+              ? AppTheme.errorColor.withValues(alpha: 0.4)
+              : AppTheme.successColor.withValues(alpha: 0.3),
+          width: insufficient ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                insufficient ? Icons.error_rounded : Icons.account_balance_wallet_rounded,
+                color: insufficient ? AppTheme.errorColor : AppTheme.successColor,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  insufficient
+                      ? 'Not enough credits!'
+                      : 'Credits Available',
+                  style: TextStyle(
+                    color: insufficient ? AppTheme.errorColor : AppTheme.successColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: insufficient
+                      ? AppTheme.errorColor.withValues(alpha: 0.15)
+                      : AppTheme.successColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$_userCredits Credit${_userCredits != 1 ? 's' : ''}',
+                  style: TextStyle(
+                    color: insufficient ? AppTheme.errorColor : AppTheme.successColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (insufficient) ...[
+            const SizedBox(height: 10),
+            Text(
+              'You need $_creditsRequired credit${_creditsRequired > 1 ? 's' : ''} but only have $_userCredits. Purchase more credits to continue booking.',
+              style: TextStyle(
+                color: AppTheme.errorColor.withValues(alpha: 0.85),
+                fontSize: 12,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BuyCreditsScreen()),
+                  ).then((_) => _loadUserCredits());
+                },
+                icon: const Icon(Icons.add_circle_rounded, size: 18),
+                label: const Text('Buy Credits'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.errorColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
