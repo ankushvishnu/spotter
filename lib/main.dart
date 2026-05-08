@@ -14,6 +14,8 @@ import 'services/messaging_service.dart';
 import 'services/profile_service.dart';
 import 'services/support_service.dart';
 import 'services/goals_service.dart';
+import 'services/notification_service.dart';
+import 'screens/splash/video_splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +25,9 @@ Future<void> main() async {
 
   // Initialize Supabase
   await SupabaseConfig.initialize();
+
+  // Initialize Notifications
+  await NotificationService().init();
 
   runApp(const MyApp());
 }
@@ -46,7 +51,7 @@ class MyApp extends StatelessWidget {
         title: 'Spotter',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const AuthWrapper(),
+        home: const VideoSplashScreen(),
         onGenerateRoute: (settings) {
           // Handle the /auth-callback route from email confirmation links
           if (settings.name == '/auth-callback') {
@@ -80,7 +85,7 @@ class AuthWrapper extends StatelessWidget {
             );
           },
           child: const Icon(
-            Icons.fitness_center_rounded,
+            Icons.center_focus_strong_rounded,
             size: 60,
             color: AppTheme.primaryColor,
           ),

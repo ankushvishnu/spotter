@@ -26,6 +26,8 @@ class BookingModel {
   final String? clientName;
   final String? clientAvatar;
 
+  final bool archived;
+
   BookingModel({
     required this.id,
     required this.clientId,
@@ -49,6 +51,7 @@ class BookingModel {
     this.trainerSpecialties,
     this.clientName,
     this.clientAvatar,
+    this.archived = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +86,7 @@ class BookingModel {
           : null,
       clientName: json['client']?['full_name'] as String?,
       clientAvatar: json['client']?['avatar_url'] as String?,
+      archived: json['archived'] as bool? ?? false,
     );
   }
 

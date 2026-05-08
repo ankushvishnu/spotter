@@ -163,10 +163,21 @@ class _BookingRequestModalState extends State<BookingRequestModal> {
   }
 
   /// Check if a time slot is blocked on ANY of the selected dates
+  /// It is blocked if it overlaps with an existing booking OR if adding the duration exceeds the day's working hours.
   bool _isSlotBlocked(TimeOfDay time) {
     if (_selectedDuration == null) return false;
     for (final date in _selectedDates) {
       final key = date.toIso8601String().split('T')[0];
+      
+      // Check if it exceeds working hour end time
+      final schedule = _availability?.getScheduleForDate(date);
+      if (schedule != null) {
+        final pEndMin = (time.hour * 60 + time.minute) + _selectedDuration!;
+        final wEndMin = schedule.end.hour * 60 + schedule.end.minute;
+        if (pEndMin > wEndMin) return true;
+      }
+
+      // Check conflicts with existing bookings
       final blocked = _blockedSlotsCache[key] ?? [];
       for (final slot in blocked) {
         if (slot.conflictsWith(time, _selectedDuration!)) return true;

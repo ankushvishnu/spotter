@@ -12,7 +12,12 @@ import 'booking_detail_screen.dart';
 import '../reviews/create_review_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
-  const MyBookingsScreen({super.key});
+  final int initialTab;
+
+  const MyBookingsScreen({
+    super.key,
+    this.initialTab = 0,
+  });
 
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
@@ -31,11 +36,32 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   bool _isLoading = true;
   String? _lastUserId;
 
+  // New states for Selection and Sorting/Filtering
+  bool _isSelectionMode = false;
+  final Set<String> _selectedBookingIds = {};
+  
+  String _statusFilter = 'All';
+  String _sortBy = 'Date ASC';
+
   @override
   void initState() {
     super.initState();
     _bookingService = context.read<BookingService>();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      initialIndex: widget.initialTab,
+      length: 2, 
+      vsync: this,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+           if (_tabController.index == 1) {
+             _isSelectionMode = false;
+             _selectedBookingIds.clear();
+           }
+        });
+      }
+    });
     _loadBookings();
     _setupRealtime();
   }
@@ -121,9 +147,73 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
   }
 
+  Future<void> _showBulkArchiveDialog() async {
+    if (_selectedBookingIds.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          title: const Text('Archive Bookings'),
+          content: Text('Archive ${_selectedBookingIds.length} booking(s)? They will be moved to your Vault.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+              child: const Text('Archive', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _bookingService.archiveBookings(_selectedBookingIds.toList());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_selectedBookingIds.length} booking(s) archived'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorColor),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSelectionMode = false);
+        _selectedBookingIds.clear();
+        _loadBookings();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: _isSelectionMode && _selectedBookingIds.isNotEmpty
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 90.0), // Above the tab island
+              child: FloatingActionButton.extended(
+                onPressed: _tabController.index == 0 ? _showBulkCancelDialog : _showBulkArchiveDialog,
+                backgroundColor: _tabController.index == 0 ? AppTheme.errorColor : Colors.blueGrey,
+                icon: Icon(_tabController.index == 0 ? Icons.cancel_rounded : Icons.archive_rounded, color: Colors.white),
+                label: Text('${_tabController.index == 0 ? 'Cancel' : 'Archive'} ${_selectedBookingIds.length}', style: const TextStyle(color: Colors.white)),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -147,14 +237,36 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildHeader() {
+    final bool onPastTab = _tabController.index == 1;
+    final int totalSelectable = onPastTab ? _pastBookings.length : _upcomingBookings.where((b) => b.isPending).length;
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingLG),
       child: Row(
         children: [
-          Text(
-            'My Bookings',
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
+          // When in selection mode show count, otherwise show title
+          if (_isSelectionMode)
+            Text(
+              '${_selectedBookingIds.length} of $totalSelectable selected',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppTheme.primaryColor),
+            )
+          else
+            Text(
+              'My Bookings',
+              style: Theme.of(context).textTheme.headlineLarge,
+            ),
+          const Spacer(),
+          if ((_tabController.index == 0 && _upcomingBookings.isNotEmpty) || 
+              (_tabController.index == 1 && _pastBookings.isNotEmpty))
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isSelectionMode = !_isSelectionMode;
+                  if (!_isSelectionMode) _selectedBookingIds.clear();
+                });
+              },
+              icon: Icon(_isSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, size: 20),
+              label: Text(_isSelectionMode ? 'Cancel' : 'Select'),
+            ),
         ],
       ),
     );
@@ -206,25 +318,129 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
+  Widget _buildFilterSortBar() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG, vertical: AppTheme.spacingMD),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Sort Dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _sortBy,
+                icon: const Icon(Icons.sort_rounded, color: AppTheme.primaryColor, size: 20),
+                dropdownColor: AppTheme.surfaceColor,
+                style: Theme.of(context).textTheme.bodySmall,
+                onChanged: (String? newValue) {
+                  if (newValue != null) setState(() => _sortBy = newValue);
+                },
+                items: <String>['Date ASC', 'Date DESC', 'Trainer', 'Speciality']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacingMD),
+          // Filter Chips
+          ...['All', 'Pending'].map((status) {
+            final isSelected = _statusFilter == status;
+            return Padding(
+              padding: const EdgeInsets.only(right: AppTheme.spacingSM),
+              child: FilterChip(
+                selected: isSelected,
+                label: Text(status),
+                onSelected: (selected) {
+                  setState(() => _statusFilter = status);
+                },
+                backgroundColor: AppTheme.surfaceColor,
+                selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                checkmarkColor: AppTheme.primaryColor,
+                labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  List<BookingModel> _getFilteredAndSortedBookings(List<BookingModel> list) {
+    // 1. Filter
+    var filtered = list.where((b) {
+      if (_statusFilter == 'All') return true;
+      return b.status.toLowerCase() == _statusFilter.toLowerCase();
+    }).toList();
+
+    // 2. Sort
+    filtered.sort((a, b) {
+      switch (_sortBy) {
+        case 'Date ASC':
+          return a.sessionDate.compareTo(b.sessionDate);
+        case 'Date DESC':
+          return b.sessionDate.compareTo(a.sessionDate);
+        case 'Trainer':
+          return (a.trainerName ?? '').compareTo(b.trainerName ?? '');
+        case 'Speciality':
+          final aSpec = a.trainerSpecialties?.isNotEmpty == true ? a.trainerSpecialties!.first : '';
+          final bSpec = b.trainerSpecialties?.isNotEmpty == true ? b.trainerSpecialties!.first : '';
+          return aSpec.compareTo(bSpec);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }
+
   Widget _buildUpcomingTab() {
-    if (_upcomingBookings.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.calendar_today_rounded,
-        title: 'No Upcoming Bookings',
-        subtitle: 'Book a session with a trainer to get started!',
+    final displayList = _getFilteredAndSortedBookings(_upcomingBookings);
+
+    if (displayList.isEmpty) {
+      return Column(
+        children: [
+          _buildFilterSortBar(),
+          Expanded(
+            child: _buildEmptyState(
+              icon: Icons.calendar_today_rounded,
+              title: 'No Upcoming Bookings',
+              subtitle: 'No sessions match your filters, or book a new one!',
+            ),
+          ),
+        ],
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadBookings,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(AppTheme.spacingLG),
-        itemCount: _upcomingBookings.length,
-        itemBuilder: (context, index) {
-          final booking = _upcomingBookings[index];
-          return _buildBookingCard(booking, isUpcoming: true);
-        },
-      ),
+    return Column(
+      children: [
+        _buildFilterSortBar(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadBookings,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(AppTheme.spacingLG),
+              itemCount: displayList.length,
+              itemBuilder: (context, index) {
+                final booking = displayList[index];
+                return _buildBookingCard(booking, isUpcoming: true);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -237,22 +453,104 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadBookings,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(AppTheme.spacingLG),
-        itemCount: _pastBookings.length,
-        itemBuilder: (context, index) {
-          final booking = _pastBookings[index];
-          return _buildBookingCard(booking, isUpcoming: false);
-        },
-      ),
+    final bool allSelected = _pastBookings.isNotEmpty &&
+        _pastBookings.every((b) => _selectedBookingIds.contains(b.id));
+
+    return Column(
+      children: [
+        // ── Select All bar (only visible in selection mode) ─────────────────
+        if (_isSelectionMode)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.fromLTRB(AppTheme.spacingLG, 0, AppTheme.spacingLG, 0),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: allSelected,
+                  tristate: false,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        // Select ALL past bookings
+                        _selectedBookingIds.addAll(_pastBookings.map((b) => b.id));
+                      } else {
+                        // Deselect all
+                        _selectedBookingIds.removeAll(_pastBookings.map((b) => b.id));
+                      }
+                    });
+                  },
+                  activeColor: AppTheme.primaryColor,
+                  side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.6)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    allSelected ? 'Deselect All' : 'Select All (${_pastBookings.length})',
+                    style: TextStyle(
+                      color: allSelected ? AppTheme.primaryColor : AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                if (_selectedBookingIds.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: _showBulkArchiveDialog,
+                    icon: const Icon(Icons.archive_rounded, size: 18),
+                    label: Text('Archive ${_selectedBookingIds.length}'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blueGrey,
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        if (_isSelectionMode) const SizedBox(height: AppTheme.spacingSM),
+        // ── Booking list ─────────────────────────────────────────────────────
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadBookings,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(AppTheme.spacingLG),
+              itemCount: _pastBookings.length,
+              itemBuilder: (context, index) {
+                final booking = _pastBookings[index];
+                return _buildBookingCard(booking, isUpcoming: false);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildBookingCard(BookingModel booking, {required bool isUpcoming}) {
+    // In upcoming -> can select if pending to cancel
+    // In past -> can select anything to archive
+    final bool canSelect = (isUpcoming && booking.isPending) || !isUpcoming;
+    final bool isSelected = _selectedBookingIds.contains(booking.id);
+
     return GestureDetector(
       onTap: () {
+        if (_isSelectionMode && canSelect) {
+          setState(() {
+            if (isSelected) {
+              _selectedBookingIds.remove(booking.id);
+            } else {
+              _selectedBookingIds.add(booking.id);
+            }
+          });
+          return;
+        }
+        if (_isSelectionMode) return; // Ignore clicks on non-pending if selecting
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -277,6 +575,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             // Header: Trainer info & status
             Row(
               children: [
+                if (_isSelectionMode && canSelect)
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppTheme.spacingMD),
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: (val) {
+                        setState(() {
+                          if (val == true) {
+                            _selectedBookingIds.add(booking.id);
+                          } else {
+                            _selectedBookingIds.remove(booking.id);
+                          }
+                        });
+                      },
+                      activeColor: AppTheme.primaryColor,
+                    ),
+                  ),
+
                 // Trainer Avatar
                 Container(
                   width: 50,
@@ -324,7 +640,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 ),
 
                 // Status Badge
-                _buildStatusBadge(booking.status),
+                if (!_isSelectionMode) _buildStatusBadge(booking.status),
               ],
             ),
 
@@ -555,6 +871,33 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
   }
 
+  Future<void> _showBulkCancelDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Selected Sessions?'),
+        content: Text(
+          'Are you sure you want to cancel ${_selectedBookingIds.length} sessions? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            child: const Text('Yes, Cancel All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _cancelBulkBookings();
+    }
+  }
+
   Future<void> _cancelBooking(BookingModel booking) async {
     final userId = context.read<AuthProvider>().user?.id;
     if (userId == null) return;
@@ -579,6 +922,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error cancelling booking: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _cancelBulkBookings() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _bookingService.cancelBulkBookings(
+        bookingIds: _selectedBookingIds.toList(),
+        cancelledBy: userId,
+        cancellationReason: 'Bulk cancelled by client',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_selectedBookingIds.length} bookings cancelled successfully'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+        setState(() {
+          _isSelectionMode = false;
+          _selectedBookingIds.clear();
+        });
+        _loadBookings(); // Refresh
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cancelling bookings: $e')),
         );
       }
     }

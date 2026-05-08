@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 import '../config/supabase_config.dart';
 import '../models/trainer_availability.dart';
 import '../models/blocked_slot.dart';
+import '../models/booking_model.dart';
 import '../utils/app_exception.dart';
+import 'notification_service.dart';
 
 class BookingService {
   final _supabase = SupabaseConfig.client;
+  
 
   Future<Map<String, dynamic>> createBooking({
     required String clientId,
@@ -267,6 +270,17 @@ class BookingService {
         'status': 'confirmed',
         'confirmed_at': DateTime.now().toIso8601String(),
       }).eq('id', bookingId);
+      
+      // Schedule notifications for confirmed booking
+      try {
+        final bookingData = await getBooking(bookingId);
+        if (bookingData != null) {
+          final booking = BookingModel.fromJson(bookingData);
+          await NotificationService().scheduleWorkoutNotifications(booking);
+        }
+      } catch (e) {
+        debugPrint('Failed to schedule notifications securely: $e');
+      }
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to confirm booking.');
     }
@@ -285,8 +299,29 @@ class BookingService {
         'cancelled_by': cancelledBy,
         'cancellation_reason': cancellationReason,
       }).eq('id', bookingId);
+      
+      // Cancel notifications
+      await NotificationService().cancelWorkoutNotifications(bookingId);
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to cancel booking.');
+    }
+  }
+
+  // Cancel multiple bookings
+  Future<void> cancelBulkBookings({
+    required List<String> bookingIds,
+    required String cancelledBy,
+    String? cancellationReason,
+  }) async {
+    try {
+      await _supabase.from('bookings').update({
+        'status': 'cancelled',
+        'cancelled_at': DateTime.now().toIso8601String(),
+        'cancelled_by': cancelledBy,
+        'cancellation_reason': cancellationReason,
+      }).inFilter('id', bookingIds);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to cancel bookings.');
     }
   }
 
@@ -329,6 +364,7 @@ class BookingService {
       }
 
       final response = await query
+          .order('status', ascending: true) // 'c'onfirmed comes before 'p'ending
           .order('session_date', ascending: true)
           .order('session_time', ascending: true);
 
@@ -355,7 +391,8 @@ class BookingService {
             ),
             client:users!bookings_client_id_fkey(id, full_name, avatar_url)
           ''')
-          .or('session_date.lt.$today,status.in.(completed,cancelled)');
+          .or('session_date.lt.$today,status.in.(completed,cancelled)')
+          .eq('archived', false);
 
       if (isTrainer) {
         query = query.eq('trainer_id', userId);
@@ -370,6 +407,52 @@ class BookingService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to load past bookings.');
+    }
+  }
+
+  // Get archived bookings
+  Future<List<Map<String, dynamic>>> getArchivedBookings(String userId, {bool isTrainer = false}) async {
+    try {
+      var query = _supabase
+          .from('bookings')
+          .select('''
+            *,
+            trainer:trainers!bookings_trainer_id_fkey(
+              id,
+              user_id,
+              specialties,
+              users!trainers_user_id_fkey(full_name, avatar_url)
+            ),
+            client:users!bookings_client_id_fkey(id, full_name, avatar_url)
+          ''')
+          .eq('archived', true);
+
+      if (isTrainer) {
+        query = query.eq('trainer_id', userId);
+      } else {
+        query = query.eq('client_id', userId);
+      }
+
+      final response = await query
+          .order('session_date', ascending: false)
+          .order('session_time', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to load archived bookings.');
+    }
+  }
+
+  // Archive bookings in bulk
+  Future<void> archiveBookings(List<String> bookingIds) async {
+    try {
+      if (bookingIds.isEmpty) return;
+      await _supabase
+          .from('bookings')
+          .update({'archived': true})
+          .inFilter('id', bookingIds);
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to archive bookings.');
     }
   }
 

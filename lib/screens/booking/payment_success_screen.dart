@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
+import '../home/home_screen_modern.dart';
+import '../credits/credits_history_screen.dart';
 
 class PaymentSuccessScreen extends StatefulWidget {
   final String bookingId;
   final int amount;
   final String trainerName;
+  final String? trainerId;
   final bool isCreditPurchase;
 
   const PaymentSuccessScreen({
@@ -12,6 +15,7 @@ class PaymentSuccessScreen extends StatefulWidget {
     required this.bookingId,
     required this.amount,
     required this.trainerName,
+    this.trainerId,
     this.isCreditPurchase = false,
   });
 
@@ -49,6 +53,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     _controller.dispose();
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -188,17 +193,36 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
 
               const Spacer(),
 
-              // Actions
+              // Actions — swapped order per user request (View Booking first, then Back to Home)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    if (widget.isCreditPurchase) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const HomeScreen(),
+                        ),
+                        (route) => false,
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CreditsHistoryScreen(),
+                        ),
+                      );
+                    } else {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const HomeScreen(initialIndex: 3),
+                        ),
+                        (route) => false,
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
                   ),
-                  child: const Text('BACK TO HOME'),
+                  child: Text((widget.isCreditPurchase ? 'VIEW MY CREDITS' : 'VIEW MY BOOKINGS').toUpperCase()),
                 ),
               ),
 
@@ -206,10 +230,9 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
 
               TextButton(
                 onPressed: () {
-                  // TODO: Navigate to bookings or credits correctly
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
-                child: Text(widget.isCreditPurchase ? 'View My Credits' : 'View My Bookings'),
+                child: const Text('Back to Home'),
               ),
             ],
           ),

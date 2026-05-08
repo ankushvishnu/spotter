@@ -25,6 +25,11 @@ class AppConstants {
     'strength',
     'endurance',
     'general_fitness',
+    'PCOS/PCOD',
+    'Post Menopause',
+    'Pregnancy',
+    'Postpartum',
+    'Injury Recovery',
   ];
   
   // Location Types

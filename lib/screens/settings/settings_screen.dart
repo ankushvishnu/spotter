@@ -4,6 +4,7 @@ import '../credits/buy_credits_screen.dart';
 import '../credits/credits_history_screen.dart';
 import '../ai/ai_agent_screen.dart';
 import '../tiers/tier_selection_screen.dart';
+import '../reviews/my_reviews_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -38,6 +39,14 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.phone_outlined,
                   label: 'Update Phone',
                   onTap: () => _showComingSoon(context, 'Update Phone'),
+                ),
+                _SettingItem(
+                  icon: Icons.rate_review_outlined,
+                  label: 'My Reviews',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
+                  ),
                 ),
               ],
             ),

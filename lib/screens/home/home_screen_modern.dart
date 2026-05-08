@@ -11,7 +11,7 @@ import '../../models/trainer_model.dart';
 import '../../models/booking_model.dart';
 import '../explore/explore_swipe_screen.dart';
 import '../search/search_screen.dart';
-import '../profile/profile_screen.dart';
+import '../navigation/navigation_menu_screen.dart';
 import '../messaging/conversations_screen.dart';
 import '../booking/my_bookings_screen.dart';
 import '../booking/booking_detail_screen.dart';
@@ -22,6 +22,7 @@ import '../../config/theme.dart';
 import '../../config/constants.dart';
 import '../../utils/image_utils.dart';
 import '../../widgets/dynamic_mesh_background.dart';
+import '../../widgets/video_background.dart';
 import '../ai/ai_agent_screen.dart';
 import '../../widgets/auth_guard.dart';
 // ── Category definition ───────────────────────────────────────────────────────
@@ -53,6 +54,8 @@ const _categories = [
       specialties: ['Yoga', 'yoga', 'Meditation', 'Pilates']),
   _Category(id: 'boxing',   label: 'Boxing',   icon: Icons.sports_mma_rounded,
       specialties: ['Boxing', 'Kickboxing', 'Martial Arts']),
+  _Category(id: 'physio',   label: 'Physio',   icon: Icons.medical_services_rounded,
+      specialties: ['Physiotherapy', 'Rehabilitation', 'Injury Recovery', 'physio']),
   _Category(id: 'online',   label: 'Online',   icon: Icons.video_call_rounded,
       serviceLocations: ['online']),
   _Category(id: 'top',      label: 'Top Rated', icon: Icons.star_rounded,
@@ -162,9 +165,10 @@ class _HomeScreenState extends State<HomeScreen>
       final bookingService = context.read<BookingService>();
       final upcoming = await bookingService.getUpcomingBookings(userId);
       if (mounted) {
+        final confirmedSessions = upcoming.where((b) => b['status'] == 'confirmed').toList();
         setState(() {
-          _nextSession = upcoming.isNotEmpty
-              ? BookingModel.fromJson(upcoming.first)
+          _nextSession = confirmedSessions.isNotEmpty
+              ? BookingModel.fromJson(confirmedSessions.first)
               : null;
           _loadingSession = false;
         });
@@ -210,19 +214,14 @@ class _HomeScreenState extends State<HomeScreen>
       List<TrainerModel> trainers;
 
       if (cat?.specialties != null && cat!.specialties!.isNotEmpty) {
-        // Fetch all and filter client-side (overlaps not supported directly in getTrainers)
-        final all = await _trainerService.getTrainers(
+        trainers = await _trainerService.getTrainers(
           excludeUserId: userId,
           minRating: cat.minRating,
           serviceLocations: cat.serviceLocations,
+          specialties: cat.specialties,
           city: _selectedCity,
-          limit: 50,
+          limit: 5,
         );
-        final specs = cat.specialties!.map((s) => s.toLowerCase()).toSet();
-        trainers = all
-            .where((t) => t.specialties.any((s) => specs.contains(s.toLowerCase())))
-            .take(5)
-            .toList();
       } else {
         trainers = await _trainerService.getTrainers(
           excludeUserId: userId,
@@ -286,18 +285,25 @@ class _HomeScreenState extends State<HomeScreen>
       final cat = _categories.firstWhere((c) => c.id == id);
       _loadFeatured(cat: cat);
     }
-    _featuredPageCtrl.animateToPage(0,
-        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    if (_featuredPageCtrl.hasClients) {
+      try {
+        _featuredPageCtrl.animateToPage(0,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      } catch (_) {
+        // Ignored. The PageView might be unmounted concurrently.
+      }
+    }
   }
 
   // ── shell build ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
     return PopScope(
-      canPop: _selectedNav == 0, // Only allow app exit from Home tab
+      canPop: !isCurrent || _selectedNav == 0, // Allow pop if another screen is on top, or if on Home tab
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
+        if (!didPop && isCurrent) {
           setState(() => _selectedNav = 0); // Go back to Home tab
         }
       },
@@ -312,7 +318,6 @@ class _HomeScreenState extends State<HomeScreen>
               ExploreSwipeScreen(onNavigateHome: () => setState(() => _selectedNav = 0)),
               const ConversationsScreen(),
               const MyBookingsScreen(),
-              const ProfileScreen(),
             ],
           ),
         ),
@@ -342,8 +347,7 @@ class _HomeScreenState extends State<HomeScreen>
                 subtitle: 'Log in or sign up to save favorites and track your progress.',
                 buttonText: 'Login / Sign Up',
                 onTap: () {
-                  // Ignore as there is no deep linking to login here, typically users will tap the profile icon
-                  setState(() => _selectedNav = 4);
+                  AuthGuard.protect(context, onAuthenticated: () {}, intent: 'create an account or sign in');
                 },
                 gradient: AppTheme.cardGradient,
               ),
@@ -361,6 +365,25 @@ class _HomeScreenState extends State<HomeScreen>
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const OnboardingScreen()));
                 },
                 gradient: LinearGradient(colors: [AppTheme.primaryColor.withValues(alpha: 0.3), AppTheme.backgroundColor]),
+              ),
+            ),
+          )
+        else if (authProvider.user?.fitnessGoals?.any((g) => ['PCOS/PCOD', 'Post Menopause'].contains(g)) ?? false)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: _buildActionCTA(
+                title: 'Specialized Health Tips',
+                subtitle: 'Explore workouts specifically designed for your health profile.',
+                buttonText: 'View Tips',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Specialized health tips coming soon!')),
+                  );
+                },
+                gradient: LinearGradient(
+                  colors: [Colors.pinkAccent.withValues(alpha: 0.2), AppTheme.backgroundColor],
+                ),
               ),
             ),
           ),
@@ -1288,7 +1311,7 @@ class _HomeScreenState extends State<HomeScreen>
       const _NavItem(icon: Icons.explore_rounded, label: 'Explore'),
       const _NavItem(icon: Icons.chat_bubble_rounded, label: 'Messages'),
       const _NavItem(icon: Icons.calendar_today_rounded, label: 'Bookings'),
-      const _NavItem(icon: Icons.person_rounded, label: 'Profile'),
+      const _NavItem(icon: Icons.menu_rounded, label: 'Menu'),
     ];
 
     return SafeArea(
@@ -1322,7 +1345,21 @@ class _HomeScreenState extends State<HomeScreen>
               return GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  setState(() => _selectedNav = i);
+                  if (i == 4) {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (context) => NavigationMenuScreen(
+                        onScreenPushed: () {
+                          // Reset to Home tab so back-button from sub-screens returns to Home
+                          setState(() => _selectedNav = 0);
+                        },
+                      ),
+                    );
+                  } else {
+                    setState(() => _selectedNav = i);
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: SizedBox(

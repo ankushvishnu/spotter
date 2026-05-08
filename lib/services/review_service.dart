@@ -115,6 +115,57 @@ class ReviewService {
     }
   }
 
+  /// Fetch all reviews submitted by a user
+  Future<List<ReviewModel>> getUserReviews(String userId) async {
+    try {
+      final response = await _supabase
+          .from('reviews')
+          .select('''
+            *,
+            trainer:trainers!reviews_trainer_id_fkey(
+              id,
+              users:user_id(id, full_name, avatar_url)
+            )
+          ''')
+          .eq('reviewer_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List).map((r) {
+        // Map the nested trainer->users data to look like reviewer data for the model
+        final trainerData = r['trainer']?['users']; // Assuming users is joined
+        if (trainerData != null) {
+          // The ReviewModel expects a 'reviewer' field with full_name/avatar_url, but for 'my reviews' 
+          // we actually want the trainer's name. We'll map the trainer into the reviewer object temporarily
+          // so the UI can display the trainer's name instead of the user's own name.
+          r['reviewer'] = trainerData;
+        }
+        return ReviewModel.fromJson(r);
+      }).toList();
+    } catch (e) {
+      debugPrint('ReviewService: getUserReviews error: $e');
+      return [];
+    }
+  }
+
+  /// Update an existing review
+  Future<void> updateReview({
+    required String reviewId,
+    required String reviewerId,
+    required int rating,
+    String? reviewText,
+  }) async {
+    try {
+      await _supabase.from('reviews').update({
+        'rating': rating,
+        'review_text': reviewText?.isEmpty == true ? null : reviewText,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', reviewId).eq('reviewer_id', reviewerId);
+    } catch (e) {
+      throw AppException.fromError(e,
+          fallbackMessage: 'Could not update your review. Please try again.');
+    }
+  }
+
   /// Get average rating stats for a trainer
   Future<Map<String, dynamic>> getTrainerRatingStats(String trainerId) async {
     try {

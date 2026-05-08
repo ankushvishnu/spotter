@@ -4,7 +4,7 @@ class ReviewModel {
   final String id;
   final String reviewerId;
   final String trainerId;
-  final String bookingId;
+  final String? bookingId;   // nullable — manually-seeded reviews may have no booking
   final int rating;
   final String? reviewText;
   final int? professionalismRating;
@@ -21,7 +21,7 @@ class ReviewModel {
     required this.id,
     required this.reviewerId,
     required this.trainerId,
-    required this.bookingId,
+    this.bookingId,
     required this.rating,
     this.reviewText,
     this.professionalismRating,
@@ -38,7 +38,7 @@ class ReviewModel {
       id: json['id'] as String,
       reviewerId: json['reviewer_id'] as String,
       trainerId: json['trainer_id'] as String,
-      bookingId: json['booking_id'] as String,
+      bookingId: json['booking_id'] as String?,   // safe null cast
       rating: json['rating'] as int,
       reviewText: json['review_text'] as String?,
       professionalismRating: json['professionalism_rating'] as int?,

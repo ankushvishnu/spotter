@@ -4,8 +4,16 @@ import '../config/constants.dart';
 import '../models/trainer_model.dart';
 import '../utils/app_exception.dart';
 
+class _CacheEntry {
+  final List<TrainerModel> data;
+  final DateTime timestamp;
+  _CacheEntry(this.data) : timestamp = DateTime.now();
+  bool get isValid => DateTime.now().difference(timestamp).inMinutes < 5;
+}
+
 class TrainerService {
   final _supabase = SupabaseConfig.client;
+  final Map<String, _CacheEntry> _queryCache = {};
 
   // Get Nearby Trainers (using PostGIS function)
   Future<List<TrainerModel>> getNearbyTrainers({
@@ -16,6 +24,11 @@ class TrainerService {
     String? userTier,
   }) async {
     try {
+      final cacheKey = 'nearby_${latitude}_${longitude}_${radiusMeters}_$userTier';
+      if (_queryCache.containsKey(cacheKey) && _queryCache[cacheKey]!.isValid) {
+        return _queryCache[cacheKey]!.data;
+      }
+
       var response = await _supabase.rpc(
         'get_nearby_trainers',
         params: {
@@ -25,14 +38,13 @@ class TrainerService {
         },
       );
 
-      // Tier visibility: Standard & Pro users can't see Elite trainers
       if (userTier != 'elite') {
         response = (response as List).where((t) => t['user_tier'] != 'elite').toList();
       }
 
-      return (response as List)
-          .map((trainer) => TrainerModel.fromJson(trainer))
-          .toList();
+      final results = (response as List).map((trainer) => TrainerModel.fromJson(trainer)).toList();
+      _queryCache[cacheKey] = _CacheEntry(results);
+      return results;
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to load nearby trainers.');
     }
@@ -41,6 +53,7 @@ class TrainerService {
   // Get All Trainers (with dynamic filter chaining)
   Future<List<TrainerModel>> getTrainers({
     String? specialty,
+    List<String>? specialties,
     int? maxPrice,
     double? minRating,
     List<String>? serviceLocations,
@@ -51,10 +64,18 @@ class TrainerService {
     String? city,
   }) async {
     try {
+      final cacheKey = 'trainers_${specialty}_${maxPrice}_${minRating}_${serviceLocations?.join(",")}_${excludeUserId}_${verifiedOnly}_${limit}_${userTier}_$city';
+      if (_queryCache.containsKey(cacheKey) && _queryCache[cacheKey]!.isValid) {
+        return _queryCache[cacheKey]!.data;
+      }
+
       var query = _supabase.from('trainer_profiles').select();
 
       if (specialty != null) {
         query = query.contains('specialties', <String>[specialty]);
+      }
+      if (specialties != null && specialties.isNotEmpty) {
+        query = query.overlaps('specialties', specialties);
       }
       if (maxPrice != null) {
         query = query.lte('price_per_session', maxPrice);
@@ -86,9 +107,9 @@ class TrainerService {
           .order('average_rating', ascending: false)
           .limit(limit);
 
-      return (response as List)
-          .map((trainer) => TrainerModel.fromJson(trainer))
-          .toList();
+      final results = (response as List).map((trainer) => TrainerModel.fromJson(trainer)).toList();
+      _queryCache[cacheKey] = _CacheEntry(results);
+      return results;
     } catch (e) {
       throw AppException.fromError(e, fallbackMessage: 'Failed to load trainers.');
     }
@@ -174,6 +195,24 @@ class TrainerService {
     } catch (e) {
       debugPrint('TrainerService: isTrainerSaved error: $e');
       return false;
+    }
+  }
+
+  // Get User's Saved Trainers
+  Future<List<Map<String, dynamic>>> getSavedTrainers(String userId) async {
+    try {
+      final response = await _supabase
+          .from('saved_trainers')
+          .select('trainer_id, trainer_profiles(*)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      
+      // Extract the trainer_profiles from the join
+      return (response as List)
+          .map((item) => item['trainer_profiles'] as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw AppException.fromError(e, fallbackMessage: 'Failed to load saved trainers.');
     }
   }
 

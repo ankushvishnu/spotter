@@ -19,9 +19,12 @@ import '../credits/buy_credits_screen.dart';
 import '../support/contact_support_screen.dart';
 import '../auth/login_screen.dart';
 import '../trainers/trainer_onboarding_screen.dart';
+import '../trainers/saved_trainers_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final Function(int)? onNavigateTo;
+
+  const ProfileScreen({super.key, this.onNavigateTo});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -37,8 +40,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isEditing = false;
   int _currentCredits = 0;
-  int _sessionsCount = 0;
-  int _reviewsCount = 0;
 
   // Controllers
   final _nameController = TextEditingController();
@@ -75,24 +76,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = await _profileService.getCurrentUserProfile();
       if (!mounted) return;
       int credits = 0;
-      int sessions = 0;
-      int reviews = 0;
       if (user != null) {
-        final bookingService = BookingService();
-        final reviewService = ReviewService();
-        
         final trainerService = context.read<TrainerService>();
         
         // Fetch all stats in parallel
         final results = await Future.wait([
           _creditsService.getUserCredits(user.id),
-          bookingService.getPastBookings(user.id),
-          reviewService.getUserReviewsCount(user.id),
         ]);
         if (!mounted) return;
         credits = results[0] as int;
-        sessions = (results[1] as List).length;
-        reviews = results[2] as int;
 
         if (user.role == 'trainer') {
           _trainerProfile = await trainerService.getTrainerByUserId(user.id);
@@ -102,8 +94,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _user = user;
           _currentCredits = credits;
-          _sessionsCount = sessions;
-          _reviewsCount = reviews;
           _nameController.text = user.fullName;
           _bioController.text = user.bio ?? '';
           _phoneController.text = user.phone ?? '';
@@ -584,34 +574,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLG),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.fitness_center_rounded,
-                  value: '$_sessionsCount',
-                  label: 'Sessions',
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacingSM),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.star_rounded,
-                  value: '$_reviewsCount',
-                  label: 'Reviews',
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacingSM),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.bookmark_rounded,
-                  value: '0',
-                  label: 'Saved',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spacingMD),
           // Credits Banner
           GestureDetector(
             onTap: () {
@@ -673,40 +635,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
-      decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppTheme.primaryColor, size: 24),
-          const SizedBox(height: AppTheme.spacingXS),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppTheme.primaryColor,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildInfoSection() {
     return Container(

@@ -58,16 +58,26 @@ class TrainerAvailability {
         .toList() ?? [45, 60, 90];
 
     // Parse weekly_schedule
+    // DB stores keys either as numeric ("1"–"7", ISO: 1=Mon, 7=Sun) or as names ("monday"–"sunday").
+    // We normalise everything to named keys for consistent querying.
     final rawSchedule = json['weekly_schedule'] as Map<String, dynamic>?;
     final weeklySchedule = <String, DaySchedule?>{};
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    for (final day in days) {
-      final dayData = rawSchedule?[day];
-      if (dayData != null && dayData is Map<String, dynamic>) {
-        weeklySchedule[day] = DaySchedule.fromJson(dayData);
-      } else {
-        weeklySchedule[day] = null; // Day off
-      }
+
+    // Build a helper that reads either "1"/"monday", "2"/"tuesday", etc.
+    DaySchedule? parseDayEntry(Map<String, dynamic>? schedule, int isoWeekday) {
+      if (schedule == null) return null;
+      final numKey = isoWeekday.toString();         // "1" = Monday
+      final nameKey = days[isoWeekday - 1];         // "monday"
+      final entry = schedule[numKey] ?? schedule[nameKey];
+      if (entry == null || entry is! Map<String, dynamic>) return null;
+      // If the schedule has an `is_active` flag that is false, treat as day off
+      if (entry['is_active'] == false) return null;
+      return DaySchedule.fromJson(entry);
+    }
+
+    for (int i = 1; i <= 7; i++) {
+      weeklySchedule[days[i - 1]] = parseDayEntry(rawSchedule, i);
     }
 
     // Parse specialties

@@ -20,15 +20,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _fitnessLevel;
   final List<String> _goals = [];
   final List<String> _preferredSpecialties = [];
+  final List<String> _healthRequirements = [];
   String? _city;
 
   final List<String> _fitnessLevelOptions = ['Beginner', 'Intermediate', 'Advanced'];
   final List<String> _goalOptions = ['Weight Loss', 'Muscle Gain', 'Flexibility', 'Endurance', 'General Fitness', 'Rehab'];
   final List<String> _specialtyOptions = ['Yoga', 'HIIT', 'Strength', 'Pilates', 'Cardio', 'Zumba'];
+  final List<String> _healthOptions = ['PCOS/PCOD', 'Post Menopause', 'Pregnancy', 'Postpartum', 'Injury Recovery', 'None'];
 
   void _nextPage() {
     FocusScope.of(context).unfocus();
-    if (_currentPage < 3) {
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: AppTheme.fastAnimation,
         curve: Curves.easeIn,
@@ -56,7 +58,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (!skipped) {
         if (_fitnessLevel != null) updates['fitness_level'] = _fitnessLevel;
-        if (_goals.isNotEmpty) updates['fitness_goals'] = _goals;
+        
+        final combinedGoals = [..._goals];
+        if (_healthRequirements.isNotEmpty && !_healthRequirements.contains('None')) {
+          combinedGoals.addAll(_healthRequirements);
+        }
+        
+        if (combinedGoals.isNotEmpty) updates['fitness_goals'] = combinedGoals;
         if (_preferredSpecialties.isNotEmpty) updates['preferred_specialties'] = _preferredSpecialties;
         if (_city != null && _city!.isNotEmpty) updates['city'] = _city;
       }
@@ -178,6 +186,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           _buildQuestionPage(
+            title: 'Any specific health focus?',
+            subtitle: 'Select any special requirements so we can match you with specialized trainers.',
+            content: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _healthOptions.map((health) {
+                final isSelected = _healthRequirements.contains(health);
+                return FilterChip(
+                  label: Text(health),
+                  selected: isSelected,
+                  onSelected: (val) {
+                    setState(() {
+                      if (health == 'None') {
+                        if (val) {
+                          _healthRequirements.clear();
+                          _healthRequirements.add('None');
+                        } else {
+                          _healthRequirements.remove('None');
+                        }
+                      } else {
+                        if (val) {
+                          _healthRequirements.remove('None');
+                          _healthRequirements.add(health);
+                        } else {
+                          _healthRequirements.remove(health);
+                        }
+                      }
+                    });
+                  },
+                  selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                );
+              }).toList(),
+            ),
+          ),
+          _buildQuestionPage(
             title: 'Where do you live?',
             subtitle: 'So we can find nearby trainers.',
             content: TextFormField(
@@ -203,7 +246,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               }
               _nextPage();
             },
-            child: Text(_currentPage == 3 ? 'Get Started' : 'Next'),
+            child: Text(_currentPage == 4 ? 'Get Started' : 'Next'),
           ),
         ),
       ),
